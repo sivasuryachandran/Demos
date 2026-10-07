@@ -1,0 +1,2602 @@
+<title>Ten Weeks — The Arctest Story</title>
+<style>
+  :root {
+    --bg: #0A0C0E;
+    --surface: #14171B;
+    --border: #262B31;
+    --text: #F2F4F5;
+    --muted: #8A9199;
+    --accent: #33E39D;
+    --accent-dim: rgba(51,227,157,0.12);
+    --amber: #F5A93F;
+    --amber-dim: rgba(245,169,63,0.12);
+    --warm: #F2734F;
+    --warm-dim: rgba(242,115,79,0.12);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-snap-type: y proximity; height: 100%; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  code, .mono { font-family: "SF Mono", ui-monospace, "Menlo", "Consolas", monospace; font-size: 0.88em; }
+  a { color: var(--accent); }
+
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 0 6vw; position: relative; z-index: 3; width: 100%; }
+
+  /* ---------- Nav / progress ---------- */
+  #progress { position: fixed; top: 0; left: 0; height: 2px; background: var(--accent); width: 0%; z-index: 100; transition: width 0.1s linear; }
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 90; background: rgba(10,12,14,0.7); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+  .nav-inner { max-width: 76rem; margin: 0 auto; padding: 0.9rem 6vw; display: flex; align-items: center; gap: 2rem; overflow-x: auto; scrollbar-width: none; }
+  .nav-inner::-webkit-scrollbar { display: none; }
+  .brand { font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; font-size: 0.92rem; }
+  .brand span { color: var(--accent); }
+  .nav-links { display: flex; gap: 1.5rem; white-space: nowrap; }
+  .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.86rem; transition: color 0.2s ease; }
+  .nav-links a.active, .nav-links a:hover { color: var(--text); }
+
+  /* ---------- Slides ---------- */
+  section {
+    min-height: 100vh; padding: 11vh 0 8vh;
+    border-top: none;
+    scroll-snap-align: start;
+    display: flex; flex-direction: column; justify-content: flex-start;
+    position: relative;
+  }
+  /* auto margins centre the content but never clip its top when it is tall */
+  section > .wrap { margin-top: auto; margin-bottom: auto; }
+  section:first-of-type { border-top: none; }
+  /* soft seam instead of a hard rule between slides */
+  section::after {
+    content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 140px;
+    background: linear-gradient(to bottom, var(--bg), transparent);
+    pointer-events: none; z-index: 0;
+  }
+  section:first-of-type::after { display: none; }
+
+  /* Full-bleed scene slides */
+  section.scene { padding: 8vh 0 0; overflow: hidden; justify-content: flex-end; }
+  section.scene > .scene-copy { margin-top: auto; }
+  .bleed { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+  .scene-copy { position: relative; z-index: 3; padding: 0 6vw 9vh; max-width: 36rem; }
+  .scene-copy.right { margin-left: auto; text-align: right; }
+  .scene-copy.right .lede, .scene-copy.right h2 { margin-left: auto; }
+
+  /* ---------- Type ---------- */
+  .eyebrow {
+    font-size: 0.78rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 1rem;
+    opacity: 0; transform: translateY(10px); transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .eyebrow.warn { color: var(--amber); }
+  .in-view .eyebrow { opacity: 1; transform: translateY(0); }
+
+  h2 {
+    font-size: clamp(2rem, 4.4vw, 3.2rem); font-weight: 600; letter-spacing: -0.015em; line-height: 1.08;
+    text-wrap: balance; margin: 0 0 1.3rem; max-width: 34ch;
+    opacity: 0; transform: translateY(16px); transition: opacity 0.7s ease 0.08s, transform 0.7s ease 0.08s;
+  }
+  .in-view h2 { opacity: 1; transform: translateY(0); }
+
+  .lede {
+    font-size: 1.08rem; color: var(--muted); max-width: 40rem; margin: 0 0 2.2rem;
+    opacity: 0; transform: translateY(14px); transition: opacity 0.7s ease 0.16s, transform 0.7s ease 0.16s;
+  }
+  .in-view .lede { opacity: 1; transform: translateY(0); }
+  p { margin: 0 0 1.1rem; }
+
+  /* ---------- Shared figure styling (in-scene) ---------- */
+  .fig .limb { stroke: var(--text); stroke-width: 5; stroke-linecap: round; fill: none; }
+  .fig .head { fill: var(--bg); stroke: var(--text); stroke-width: 5; }
+  .fig .eye { fill: var(--text); }
+  .fig-sm .limb { stroke-width: 4; }
+  .fig-sm .head { stroke-width: 4; }
+
+  .struct { fill: none; stroke: var(--border); stroke-width: 3; }
+  .struct-thin { fill: none; stroke: var(--border); stroke-width: 2; }
+  .accent-stroke { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .accent-fill { fill: var(--accent); }
+  .amber-stroke { fill: none; stroke: var(--amber); stroke-width: 3; }
+  .label-svg { fill: var(--muted); font-family: -apple-system, sans-serif; font-size: 20px; font-weight: 600; letter-spacing: 3px; text-anchor: middle; }
+  .label-svg.accent { fill: var(--accent); }
+  .sky-dot { fill: var(--muted); opacity: 0.45; }
+
+  /* ---------- Floating label field ---------- */
+  .floaters { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+  .floater {
+    position: absolute; font-size: clamp(0.62rem, 0.9vw, 0.74rem); font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0.32rem 0.7rem; border-radius: 100px;
+    background: rgba(20,23,27,0.55); border: 1px solid var(--border); color: var(--muted);
+    white-space: nowrap; opacity: 0; transition: opacity 0.8s ease;
+    backdrop-filter: blur(4px);
+  }
+  .in-view .floater { opacity: 0.82; }
+  .floater.hot { border-color: rgba(51,227,157,0.4); color: var(--accent); }
+  .floater.warn { border-color: rgba(245,169,63,0.4); color: var(--amber); }
+  .floater { animation: drift 9s ease-in-out infinite; }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) rotate(var(--rot, 0deg)); }
+    33% { transform: translate(10px, -16px) rotate(var(--rot, 0deg)); }
+    66% { transform: translate(-8px, 10px) rotate(var(--rot, 0deg)); }
+  }
+  /* Spread right across the canvas — left, middle and right, top to bottom */
+  .f1  { top: 9%;  left: 4%;   --rot: -3deg; animation-duration: 11s; }
+  .f2  { top: 17%; left: 71%;  --rot: 2deg;  animation-duration: 9s;  animation-delay: -2s; }
+  .f3  { top: 33%; left: 88%;  --rot: 4deg;  animation-duration: 13s; animation-delay: -5s; }
+  .f4  { top: 12%; left: 44%;  --rot: -2deg; animation-duration: 10s; animation-delay: -3s; }
+  .f5  { top: 51%; left: 79%;  --rot: 3deg;  animation-duration: 12s; animation-delay: -7s; }
+  .f6  { top: 84%; left: 62%;  --rot: -4deg; animation-duration: 8.5s; animation-delay: -1s; }
+  .f7  { top: 27%; left: 25%;  --rot: 2deg;  animation-duration: 14s; animation-delay: -6s; }
+  .f8  { top: 90%; left: 17%;  --rot: -3deg; animation-duration: 10.5s; animation-delay: -4s; }
+  .f9  { top: 44%; left: 52%;  --rot: 3deg;  animation-duration: 12.5s; animation-delay: -8s; }
+  .f10 { top: 68%; left: 36%;  --rot: -2deg; animation-duration: 9.5s; animation-delay: -2.5s; }
+  .f11 { top: 74%; left: 90%;  --rot: 4deg;  animation-duration: 11.5s; animation-delay: -9s; }
+  .f12 { top: 58%; left: 8%;   --rot: -3deg; animation-duration: 13.5s; animation-delay: -5.5s; }
+
+  /* Denser text slides: same full-canvas spread, offset so the pair never repeat */
+  .floaters.rim .f1  { top: 6%;  left: 12%; }
+  .floaters.rim .f2  { top: 30%; left: 84%; }
+  .floaters.rim .f3  { top: 55%; left: 3%; }
+  .floaters.rim .f4  { top: 16%; left: 62%; }
+  .floaters.rim .f5  { top: 78%; left: 46%; }
+  .floaters.rim .f6  { top: 88%; left: 76%; }
+  .floaters.rim .f7  { top: 66%; left: 20%; }
+  .floaters.rim .f8  { top: 92%; left: 33%; }
+  .floaters.rim .f9  { top: 40%; left: 92%; }
+  .floaters.rim .f10 { top: 21%; left: 33%; }
+  .floaters.rim .f11 { top: 31%; left: 74%; }
+  .floaters.rim .f12 { top: 8%;  left: 88%; }
+
+  @media (max-width: 1100px) { .floaters { display: none; } }
+
+  /* screams on the coaster slide — louder, wobblier, no pill chrome */
+  .floater.scream {
+    background: none;
+    border: none;
+    backdrop-filter: none;
+    color: var(--text);
+    font-size: clamp(0.85rem, 1.5vw, 1.25rem);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    padding: 0;
+    text-shadow: 0 0 18px rgba(10,12,14,0.95), 0 0 6px rgba(10,12,14,0.9);
+    animation: scream-wobble 2.6s ease-in-out infinite;
+  }
+  .in-view .floater.scream { opacity: 0.9; }
+  .floater.scream.f2, .floater.scream.f6, .floater.scream.f11 { color: var(--amber); }
+  .floater.scream.f3, .floater.scream.f9 { color: var(--warm); }
+  .floater.scream.f12 { color: var(--accent); }
+  @keyframes scream-wobble {
+    0%, 100% { transform: translate(0, 0) rotate(var(--rot, 0deg)) scale(1); }
+    20% { transform: translate(4px, -9px) rotate(calc(var(--rot, 0deg) - 4deg)) scale(1.09); }
+    45% { transform: translate(-5px, 5px) rotate(calc(var(--rot, 0deg) + 5deg)) scale(0.95); }
+    70% { transform: translate(6px, -4px) rotate(calc(var(--rot, 0deg) - 2deg)) scale(1.05); }
+  }
+  .floater.scream.f2 { animation-duration: 1.9s; }
+  .floater.scream.f3 { animation-duration: 3.1s; }
+  .floater.scream.f5 { animation-duration: 2.2s; }
+  .floater.scream.f7 { animation-duration: 3.4s; }
+  .floater.scream.f10 { animation-duration: 2.05s; }
+  .floater.scream.f12 { animation-duration: 3.7s; }
+
+  /* ---------- Chapter title cards ---------- */
+  .chapter-title { text-align: center; align-items: center; }
+  .ghost-num {
+    font-size: clamp(6rem, 19vw, 12rem); font-weight: 700; letter-spacing: -0.02em; line-height: 0.8;
+    color: var(--border); -webkit-text-stroke: 1px var(--muted); margin: 0 0 1.6rem;
+    opacity: 0; transform: scale(0.92); transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .in-view .ghost-num { opacity: 1; transform: scale(1); }
+  .chapter-label { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.6rem; opacity: 0; transition: opacity 0.6s ease 0.2s; }
+  .in-view .chapter-label { opacity: 1; }
+  .chapter-name { font-size: clamp(2.2rem, 5.6vw, 3.6rem); font-weight: 650; margin: 0 auto 0.9rem; opacity: 0; transform: translateY(10px); transition: opacity 0.7s ease 0.3s, transform 0.7s ease 0.3s; }
+  .in-view .chapter-name { opacity: 1; transform: translateY(0); }
+  .chapter-tag { color: var(--muted); font-size: 1.05rem; max-width: 32rem; margin: 0 auto; opacity: 0; transition: opacity 0.7s ease 0.4s; }
+  .in-view .chapter-tag { opacity: 1; }
+
+  /* ---------- Cards ---------- */
+  .cards { display: flex; flex-direction: column; gap: 1.1rem; }
+  .card {
+    background: rgba(20,23,27,0.85); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem 1.8rem;
+    opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.3s ease;
+    backdrop-filter: blur(6px);
+  }
+  .in-view .card { opacity: 1; transform: translateY(0); }
+  .in-view .cards .card:nth-child(2) { transition-delay: 0.08s; }
+  .in-view .cards .card:nth-child(3) { transition-delay: 0.16s; }
+  .card:hover { border-color: #333a41; }
+  .card-title { font-size: 1.14rem; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 0.3rem; }
+  .card-meta { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.8rem; }
+  .card p { color: #C7CCD1; font-size: 0.94rem; margin: 0; }
+
+  .callout { margin-top: 1rem; padding: 0.9rem 1.1rem; border-left: 3px solid var(--accent); background: var(--accent-dim); border-radius: 0 8px 8px 0; font-size: 0.88rem; color: #CFEFE0; }
+  .callout.warn { border-color: var(--amber); background: var(--amber-dim); color: #F0DDB8; }
+  .note { margin-top: 0.9rem; font-size: 0.86rem; color: var(--muted); font-style: italic; }
+
+  /* ---------- Terminal ---------- */
+  .terminal { background: rgba(13,16,19,0.92); border: 1px solid var(--border); border-radius: 12px; max-width: 40rem; margin: 0 auto; overflow: hidden; width: 100%; backdrop-filter: blur(6px); }
+  .terminal-bar { display: flex; gap: 0.4rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); }
+  .terminal-bar span { width: 9px; height: 9px; border-radius: 50%; background: var(--border); display: block; }
+  .terminal-body { padding: 1.3rem 1.6rem; font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 0.83rem; line-height: 2; color: #B9C4CB; }
+  .terminal-body .line { opacity: 0; transform: translateX(-8px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .in-view .terminal-body .line { opacity: 1; transform: none; }
+  .in-view .terminal-body .line:nth-child(1) { transition-delay: 0.1s; }
+  .in-view .terminal-body .line:nth-child(2) { transition-delay: 0.28s; }
+  .in-view .terminal-body .line:nth-child(3) { transition-delay: 0.46s; }
+  .in-view .terminal-body .line:nth-child(4) { transition-delay: 0.64s; }
+  .in-view .terminal-body .line:nth-child(5) { transition-delay: 0.82s; }
+  .in-view .terminal-body .line:nth-child(6) { transition-delay: 1s; }
+  .terminal-body .prompt { color: var(--accent); }
+  .terminal-body .fixed-tag { color: var(--amber); font-weight: 600; }
+
+  /* ---------- Case cards ---------- */
+  .case { background: rgba(20,23,27,0.85); border: 1px solid var(--border); border-radius: 14px; padding: 1.4rem 1.7rem; margin-bottom: 0.9rem; opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease; backdrop-filter: blur(6px); }
+  .in-view .case { opacity: 1; transform: translateY(0); }
+  .in-view .case:nth-of-type(2) { transition-delay: 0.08s; }
+  .in-view .case:nth-of-type(3) { transition-delay: 0.16s; }
+  .case h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.6rem; }
+  .case-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.3rem; }
+  @media (max-width: 780px) { .case-grid { grid-template-columns: 1fr; } }
+  .case-grid h4 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.35rem; }
+  .case-grid p { font-size: 0.87rem; color: #C7CCD1; margin: 0; }
+  .case-grid .verif p { color: #CFEFE0; }
+  .case-line { font-size: 0.87rem; color: #C7CCD1; margin: 0 0 0.4rem; line-height: 1.5; }
+  .case-line:last-child { margin-bottom: 0; }
+  .case-line.verif { color: #CFEFE0; padding-left: 0.8rem; border-left: 2px solid rgba(51,227,157,0.45); }
+
+  /* ---------- Status rows / checklist ---------- */
+  .status-row { display: flex; gap: 1.4rem; padding: 1.1rem 0; border-top: 1px solid var(--border); opacity: 0; transform: translateY(12px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .in-view .status-row { opacity: 1; transform: translateY(0); }
+  .status-row:first-of-type { border-top: none; }
+  .status-name { flex: 0 0 12rem; font-weight: 600; font-size: 0.94rem; }
+  .status-desc { color: #C7CCD1; font-size: 0.9rem; }
+
+  .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 2rem; }
+  @media (max-width: 780px) { .check-grid { grid-template-columns: 1fr; } }
+  .check-item { display: flex; gap: 0.65rem; align-items: flex-start; font-size: 0.9rem; color: #C7CCD1; opacity: 0; transform: translateY(8px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .in-view .check-item { opacity: 1; transform: translateY(0); }
+  .check-item .tick { flex: 0 0 18px; height: 18px; margin-top: 0.15rem; border-radius: 50%; background: var(--accent-dim); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; }
+
+  /* ---------- Spotlight ---------- */
+  .spotlight { border: 1px solid var(--amber); background: rgba(245,169,63,0.09); border-radius: 16px; padding: 1.6rem 2rem; opacity: 0; transform: translateY(14px); transition: opacity 0.6s ease, transform 0.6s ease; backdrop-filter: blur(6px); }
+  .in-view .spotlight { opacity: 1; transform: translateY(0); }
+  .spotlight p { font-size: 0.94rem; }
+  .spotlight pre { background: rgba(13,16,19,0.9); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1.1rem; font-size: 0.8rem; color: #C7CCD1; overflow-x: auto; margin: 0.8rem 0; line-height: 1.7; }
+  .spotlight .verdict { color: #F0DDB8; margin: 0.6rem 0 0; }
+
+  /* ---------- Chain ---------- */
+  .chain { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .chain .node { background: rgba(20,23,27,0.85); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; font-size: 0.85rem; opacity: 0; transform: translateY(10px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .in-view .chain .node { opacity: 1; transform: translateY(0); }
+  .in-view .chain .node:nth-child(3) { transition-delay: 0.15s; }
+  .in-view .chain .node:nth-child(5) { transition-delay: 0.3s; }
+  .in-view .chain .node:nth-child(7) { transition-delay: 0.45s; }
+  .chain .arrow { color: var(--muted); font-size: 1.05rem; }
+
+  .pullquote { font-size: clamp(1.15rem, 2.3vw, 1.45rem); font-weight: 500; line-height: 1.5; border-left: 3px solid var(--accent); padding-left: 1.2rem; color: var(--text); margin: 1.5rem 0 0; max-width: 38rem; opacity: 0; transform: translateY(12px); transition: opacity 0.7s ease 0.3s, transform 0.7s ease 0.3s; }
+  .in-view .pullquote { opacity: 1; transform: translateY(0); }
+
+  /* ---------- ANPN board ---------- */
+  .board-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.6rem; }
+  section.board-scene { padding: 11vh 0 6vh; }
+  .board-wrap { max-width: 68rem; margin-right: auto; margin-left: 6vw; }
+  @media (min-width: 1400px) { .board-wrap { max-width: 72rem; } }
+  .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.9rem; align-items: start; }
+  .board-col {
+    background: rgba(20,23,27,0.8); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.2rem;
+    opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease;
+    backdrop-filter: blur(6px);
+  }
+  .in-view .board-col { opacity: 1; transform: translateY(0); }
+  .in-view .board-col:nth-child(2) { transition-delay: 0.08s; }
+  .in-view .board-col:nth-child(3) { transition-delay: 0.16s; }
+  .in-view .board-col:nth-child(4) { transition-delay: 0.24s; }
+  .board-col h3 { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 0.9rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border); }
+  .board-col.hot h3 { color: var(--accent); border-color: rgba(51,227,157,0.3); }
+  .board-col.warm h3 { color: var(--amber); border-color: rgba(245,169,63,0.3); }
+  .tickets { display: flex; flex-direction: column; gap: 0.55rem; }
+  .ticket {
+    display: flex; flex-direction: column; gap: 0.15rem;
+    background: rgba(10,12,14,0.7); border: 1px solid var(--border); border-radius: 9px;
+    padding: 0.6rem 0.75rem; transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .ticket:hover { border-color: #3a4148; transform: translateX(3px); }
+  .ticket .tid { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 0.78rem; font-weight: 600; color: var(--accent); letter-spacing: 0.02em; }
+  .board-col.warm .ticket .tid { color: var(--amber); }
+  .ticket .tdesc { font-size: 0.76rem; color: var(--muted); line-height: 1.42; }
+  .ticket .tdesc code { font-size: 0.9em; }
+  .board-note { margin-top: 1.4rem; font-size: 0.84rem; color: var(--muted); font-style: italic; }
+
+  /* ---------- Bridge slides (the turns in the argument) ---------- */
+  .bridge .wrap { max-width: 58rem; }
+  .bridge .statement {
+    font-size: clamp(1.9rem, 4vw, 2.9rem);
+    max-width: 30ch;
+  }
+  .bridge .lede { max-width: 42rem; margin-bottom: 1.8rem; }
+  .bridge-line {
+    margin: 1.6rem 0 0; font-size: 1.02rem; color: var(--muted);
+    max-width: 44rem; padding-left: 1.1rem; border-left: 2px solid var(--accent);
+    opacity: 0; transform: translateY(10px);
+    transition: opacity 0.6s ease 0.45s, transform 0.6s ease 0.45s;
+  }
+  .in-view .bridge-line { opacity: 1; transform: translateY(0); }
+  .bridge-line strong { color: var(--text); font-weight: 600; }
+
+  /* two-panel before/after */
+  .compare { display: flex; align-items: stretch; gap: 1rem; flex-wrap: wrap; }
+  .cpanel {
+    flex: 1 1 17rem;
+    background: rgba(20,23,27,0.85); border: 1px solid var(--border); border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+    opacity: 0; transform: translateY(14px);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+  }
+  .in-view .cpanel { opacity: 1; transform: translateY(0); }
+  .in-view .cpanel:last-of-type { transition-delay: 0.14s; }
+  .cpanel-label { font-size: 0.66rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.7rem; }
+  .verdict-row { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; }
+  .verdict { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.05em; }
+  .verdict.pass { color: var(--accent); }
+  .verdict.fail { color: var(--warm); }
+  .verdict-note { font-size: 0.76rem; color: var(--muted); font-style: italic; }
+  .cpanel-line {
+    background: rgba(10,12,14,0.7); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.5rem 0.7rem; font-size: 0.76rem; color: #C7CCD1; margin-bottom: 0.7rem;
+    overflow-x: auto; white-space: nowrap;
+  }
+  .cpanel-line.warnline { color: var(--amber); border-color: rgba(245,169,63,0.3); }
+  .cpanel-cap { font-size: 0.83rem; color: var(--muted); margin: 0; line-height: 1.5; }
+  .cdivider { align-self: center; color: var(--muted); font-size: 1.3rem; flex: 0 0 auto; }
+  @media (max-width: 760px) { .cdivider { display: none; } }
+
+  /* three-step gap diagram */
+  .steps-row { display: flex; align-items: stretch; gap: 0.7rem; flex-wrap: wrap; }
+  .step-box {
+    flex: 1 1 12rem;
+    background: rgba(20,23,27,0.85); border: 1px solid var(--border); border-radius: 14px;
+    padding: 1rem 1.1rem;
+    opacity: 0; transform: translateY(14px);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+  }
+  .in-view .step-box { opacity: 1; transform: translateY(0); }
+  .in-view .step-box:nth-of-type(2) { transition-delay: 0.1s; }
+  .in-view .step-box:nth-of-type(3) { transition-delay: 0.2s; }
+  .step-box.gap { border-style: dashed; border-color: rgba(245,169,63,0.55); background: rgba(245,169,63,0.06); }
+  .step-k { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .step-box.gap .step-k { color: var(--amber); }
+  .step-v { font-size: 0.95rem; font-weight: 600; color: var(--text); line-height: 1.35; margin-bottom: 0.4rem; }
+  .step-c { font-size: 0.8rem; color: var(--muted); margin: 0; line-height: 1.48; }
+  .step-arrow { align-self: center; color: var(--muted); font-size: 1.2rem; flex: 0 0 auto; }
+  @media (max-width: 900px) { .step-arrow { display: none; } }
+
+  /* ---------- Agent grids ---------- */
+  .agents-wrap { max-width: 60rem; }
+  .agents { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; }
+  @media (max-width: 1240px) { .agents { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 640px) { .agents { grid-template-columns: 1fr; } }
+  .agent {
+    background: rgba(20,23,27,0.85); border: 1px solid var(--border); border-radius: 13px;
+    padding: 1rem 1.1rem;
+    opacity: 0; transform: translateY(14px);
+    transition: opacity 0.55s ease, transform 0.55s ease, border-color 0.2s ease;
+  }
+  .in-view .agent { opacity: 1; transform: translateY(0); }
+  .in-view .agent:nth-child(2) { transition-delay: 0.07s; }
+  .in-view .agent:nth-child(3) { transition-delay: 0.14s; }
+  .in-view .agent:nth-child(4) { transition-delay: 0.21s; }
+  .agent:hover { border-color: #3a4148; }
+  .agent.hot { border-color: rgba(51,227,157,0.32); background: rgba(51,227,157,0.045); }
+  .agent-name {
+    font-size: 0.9rem; font-weight: 650; color: var(--text); letter-spacing: -0.005em;
+    margin-bottom: 0.5rem; padding-bottom: 0.45rem; border-bottom: 1px solid var(--border);
+  }
+  .agent.hot .agent-name { color: var(--accent); border-color: rgba(51,227,157,0.25); }
+  .agent p { font-size: 0.815rem; color: var(--muted); margin: 0; line-height: 1.5; }
+  .agent p code { font-size: 0.9em; color: #C7CCD1; }
+  .agent p em { color: #C7CCD1; font-style: italic; }
+
+  /* ---------- ANPN board panel ---------- */
+  #anpn { padding: 10vh 0 5vh; }
+  .tabs-wrap { max-width: none; padding: 0 3vw; }
+  .board-panel {
+    background: #06080A;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.1rem;
+    opacity: 0; transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .in-view .board-panel { opacity: 1; transform: translateY(0); }
+  .board-panel .board { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.7rem; }
+  @media (max-width: 1240px) { .board-panel .board { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+  @media (max-width: 860px) { .board-panel .board { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 620px) { .board-panel .board { grid-template-columns: 1fr; } }
+  .board-panel .board-col { background: rgba(20,23,27,0.9); padding: 0.85rem 0.85rem; height: 100%; }
+  .board-panel .board-col h3 { font-size: 0.64rem; margin-bottom: 0.6rem; padding-bottom: 0.45rem; letter-spacing: 0.06em; }
+  .board-panel .tickets { gap: 0.34rem; }
+  .board-panel .ticket { padding: 0.42rem 0.55rem; border-radius: 7px; gap: 0.1rem; }
+  .board-panel .ticket .tid { font-size: 0.7rem; }
+  .board-panel .ticket .tdesc { font-size: 0.685rem; line-height: 1.36; }
+  .ticket.ref .tid { color: var(--amber) !important; }
+  .ticket.ref { border-style: dashed; }
+
+  /* the bug I filed */
+  .board-col.filed {
+    background: linear-gradient(165deg, rgba(242,115,79,0.13), rgba(242,115,79,0.03)) !important;
+    border-color: rgba(242,115,79,0.45);
+  }
+  .board-col.filed h3 { color: var(--warm); border-color: rgba(242,115,79,0.3); }
+  .filed-ticket { border-color: rgba(242,115,79,0.35) !important; gap: 0.25rem !important; }
+  .filed-ticket .tid { color: var(--warm) !important; }
+  .filed-head { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.1rem; }
+  .filed-pill {
+    font-size: 0.58rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--muted); border: 1px solid var(--border); background: rgba(10,12,14,0.55);
+    padding: 0.16rem 0.42rem; border-radius: 100px;
+  }
+  .filed-pill.p1 { color: var(--warm); border-color: rgba(242,115,79,0.5); }
+  .filed-title { font-size: 0.735rem; font-weight: 600; color: var(--text); line-height: 1.36; }
+
+  /* ---------- Coaster ---------- */
+  .track-shadow { fill: none; stroke: var(--bg); stroke-width: 16; opacity: 0.9; }
+  .track-main { fill: none; stroke: var(--accent); stroke-width: 4; opacity: 0.85; }
+  .track-ties { fill: none; stroke: var(--accent); stroke-width: 13; stroke-dasharray: 1.5 13; opacity: 0.35; }
+  .ground { stroke: var(--border); stroke-width: 2; }
+  .pylons line { stroke: var(--border); stroke-width: 2.5; }
+  .wheel-rim { fill: none; stroke: var(--border); stroke-width: 3; }
+  .wheel-spoke { stroke: var(--border); stroke-width: 1.5; }
+  .wheel-leg { stroke: var(--border); stroke-width: 3; }
+  .tower { stroke: var(--border); stroke-width: 3; }
+  .tower-arm { stroke: var(--border); stroke-width: 4; }
+  .tower-car { fill: none; stroke: var(--amber); stroke-width: 2.5; opacity: 0.7; }
+  .wheel-spin { animation: wheel-turn 22s linear infinite; transform-origin: 200px 620px; }
+  @keyframes wheel-turn { to { transform: rotate(360deg); } }
+  .tower-car { animation: tower-drop 6s cubic-bezier(.5,0,.9,.3) infinite; }
+  @keyframes tower-drop { 0%, 45% { transform: translateY(0); } 62% { transform: translateY(330px); } 75%, 100% { transform: translateY(0); } }
+  .rider.trail1 { opacity: 0.35; }
+  .rider.trail2 { opacity: 0.16; }
+  .sign-text { fill: var(--muted); font-family: -apple-system, sans-serif; font-size: 34px; font-weight: 700; letter-spacing: 8px; text-anchor: middle; opacity: 0.45; }
+  .sign-sub { fill: var(--accent); font-family: -apple-system, sans-serif; font-size: 17px; font-weight: 600; letter-spacing: 6px; text-anchor: middle; opacity: 0.7; }
+
+  /* ---------- Scene animations ---------- */
+  /* desk: typing, steam, screen scroll, cursor */
+  .type-l { animation: type-a 0.42s ease-in-out infinite; transform-origin: 0 0; }
+  .type-r { animation: type-b 0.42s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes type-a { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-7deg); } }
+  @keyframes type-b { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(1deg); } }
+  .steam { animation: steam-rise 3.2s ease-out infinite; }
+  .steam.s2 { animation-delay: 1.05s; }
+  .steam.s3 { animation-delay: 2.1s; }
+  @keyframes steam-rise {
+    0% { opacity: 0; transform: translateY(0) scaleX(1); }
+    25% { opacity: 0.7; }
+    100% { opacity: 0; transform: translateY(-52px) scaleX(1.5); }
+  }
+  .code-scroll { animation: code-up 9s linear infinite; }
+  @keyframes code-up { from { transform: translateY(0); } to { transform: translateY(-170px); } }
+  .cursor-blink { animation: blink 1.05s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .lamp-glow { animation: glow-pulse 5s ease-in-out infinite; }
+  @keyframes glow-pulse { 0%,100% { opacity: 0.75; } 50% { opacity: 1; } }
+
+  /* migration: carry boxes across */
+  .carrier { animation: carry-walk 8s ease-in-out infinite; }
+  @keyframes carry-walk {
+    0%, 6% { transform: translateX(500px); }
+    44%, 56% { transform: translateX(720px); }
+    94%, 100% { transform: translateX(500px); }
+  }
+  .step-l { animation: step-a 0.5s ease-in-out infinite; transform-origin: 0 0; }
+  .step-r { animation: step-b 0.5s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes step-a { 0%,100% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } }
+  @keyframes step-b { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
+  .box-fade-in { animation: box-appear 8s ease-in-out infinite; }
+  @keyframes box-appear { 0%, 50% { opacity: 0; } 58%, 100% { opacity: 1; } }
+  .box-fade-out { animation: box-vanish 8s ease-in-out infinite; }
+  @keyframes box-vanish { 0%, 42% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+  /* automation: gears + conveyor */
+  .gear { animation: spin-cw 6s linear infinite; }
+  .gear.ccw { animation: spin-ccw 6s linear infinite; }
+  @keyframes spin-cw { to { transform: rotate(360deg); } }
+  @keyframes spin-ccw { to { transform: rotate(-360deg); } }
+  .belt-dash { stroke-dasharray: 14 14; animation: belt-move 1.1s linear infinite; }
+  @keyframes belt-move { to { stroke-dashoffset: -28; } }
+  .lever-arm { animation: lever-pull 2.4s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes lever-pull { 0%,100% { transform: rotate(-42deg); } 50% { transform: rotate(-88deg); } }
+  .stamp { animation: stamp-pop 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  .stamp.d2 { animation-delay: 0.8s; }
+  .stamp.d3 { animation-delay: 1.6s; }
+  @keyframes stamp-pop { 0% { opacity: 0; transform: scale(0.4); } 18% { opacity: 1; transform: scale(1.15); } 32% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* manual: rack LEDs + magnifier */
+  .led { animation: led-blink 1.7s steps(2) infinite; }
+  .led.l2 { animation-delay: 0.25s; animation-duration: 2.3s; }
+  .led.l3 { animation-delay: 0.6s; animation-duration: 1.3s; }
+  .led.l4 { animation-delay: 0.9s; animation-duration: 2.9s; }
+  .led.l5 { animation-delay: 1.2s; animation-duration: 1.9s; }
+  .led.l6 { animation-delay: 0.4s; animation-duration: 2.5s; }
+  @keyframes led-blink { 50% { opacity: 0.15; } }
+  .scanner { animation: scan-move 6s ease-in-out infinite; }
+  @keyframes scan-move { 0%,100% { transform: translate(0,0); } 25% { transform: translate(0,-120px); } 50% { transform: translate(70px,-60px); } 75% { transform: translate(40px,20px); } }
+  .clipboard-tick { animation: tick-in 6s ease-out infinite; }
+  .clipboard-tick.t2 { animation-delay: 2s; }
+  .clipboard-tick.t3 { animation-delay: 4s; }
+  @keyframes tick-in { 0%,8% { opacity: 0; } 16%, 88% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* juggle scene */
+  .juggle-body { animation: juggle-bob 0.9s ease-in-out infinite; }
+  @keyframes juggle-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  .j-arm-r { animation: j-r 0.9s ease-in-out infinite; transform-origin: 0 0; }
+  .j-arm-l { animation: j-l 0.9s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes j-r { 0%,100% { transform: rotate(-58deg); } 50% { transform: rotate(-16deg); } }
+  @keyframes j-l { 0%,100% { transform: rotate(16deg); } 50% { transform: rotate(58deg); } }
+  .jball { animation: jball-arc 1.8s ease-in-out infinite; }
+  .jball.jb2 { animation-delay: -0.6s; }
+  .jball.jb3 { animation-delay: -1.2s; }
+  @keyframes jball-arc {
+    0%   { transform: translate(-90px, 0); }
+    25%  { transform: translate(-45px, -130px); }
+    50%  { transform: translate(90px, 0); }
+    75%  { transform: translate(45px, -130px); }
+    100% { transform: translate(-90px, 0); }
+  }
+
+  /* l3vpn switchboard: flowing packets */
+  .flow { animation: flow-dash 2.2s linear infinite; stroke-dasharray: 6 22; }
+  .flow.fd2 { animation-delay: -0.5s; }
+  .flow.fd3 { animation-delay: -1s; }
+  .flow.fd4 { animation-delay: -1.5s; }
+  .flow.fd5 { animation-delay: -0.25s; }
+  @keyframes flow-dash { to { stroke-dashoffset: -56; } }
+  .plug-arm { animation: plug-move 5s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes plug-move { 0%,100% { transform: rotate(-52deg); } 33% { transform: rotate(-80deg); } 66% { transform: rotate(-30deg); } }
+
+  /* board scene: pointer + notes */
+  .pointer-arm { animation: point-sweep 7s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes point-sweep { 0%,100% { transform: rotate(-64deg); } 30% { transform: rotate(-40deg); } 60% { transform: rotate(-82deg); } }
+  .pin-note { animation: note-flutter 4s ease-in-out infinite; transform-box: fill-box; transform-origin: top center; }
+  .pin-note.n2 { animation-delay: -1s; }
+  .pin-note.n3 { animation-delay: -2s; }
+  .pin-note.n4 { animation-delay: -3s; }
+  @keyframes note-flutter { 0%,100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+
+  /* ---------- Opening crowd ---------- */
+  .crowd-unit { transform-box: fill-box; transform-origin: center bottom; }
+  .jump { animation: jump-up 1.1s ease-in-out infinite; }
+  .jump.j2 { animation-delay: -0.35s; animation-duration: 0.9s; }
+  .jump.j3 { animation-delay: -0.7s; animation-duration: 1.3s; }
+  @keyframes jump-up { 0%,100% { transform: translateY(0); } 45% { transform: translateY(-58px); } }
+  .dash { animation: dash-across 5s linear infinite; }
+  .dash.d-b { animation-delay: -2.5s; animation-duration: 6.5s; }
+  @keyframes dash-across { from { transform: translateX(600px); } to { transform: translateX(1900px); } }
+  .dash-back { animation: dash-back 6s linear infinite; }
+  @keyframes dash-back { from { transform: translateX(1900px); } to { transform: translateX(600px); } }
+  .dance { animation: dance-sway 1.4s ease-in-out infinite; }
+  .dance.dc2 { animation-delay: -0.5s; }
+  @keyframes dance-sway { 0%,100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+  .spin-fig { animation: fig-spin 3.4s linear infinite; }
+  @keyframes fig-spin { to { transform: rotate(360deg); } }
+  .swipe-l { animation: swipe-a 0.7s ease-in-out infinite; transform-origin: 0 0; }
+  .swipe-r { animation: swipe-b 0.7s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes swipe-a { 0%,100% { transform: rotate(-40deg); } 50% { transform: rotate(30deg); } }
+  @keyframes swipe-b { 0%,100% { transform: rotate(30deg); } 50% { transform: rotate(-40deg); } }
+  .flail { animation: flail-arm 0.55s ease-in-out infinite; transform-origin: 0 0; }
+  .flail.fl2 { animation-delay: -0.27s; }
+  @keyframes flail-arm { 0%,100% { transform: rotate(-52deg); } 50% { transform: rotate(-128deg); } }
+  .kick { animation: kick-leg 0.8s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes kick-leg { 0%,100% { transform: rotate(12deg); } 50% { transform: rotate(-46deg); } }
+
+  /* the one we zoom to */
+  .qmark { animation: q-pulse 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+  @keyframes q-pulse { 0%,100% { transform: translateY(0) scale(1); opacity: 0.85; } 50% { transform: translateY(-16px) scale(1.08); opacity: 1; } }
+  .confused-l { animation: confused-a 3s ease-in-out infinite; transform-origin: 0 0; }
+  .confused-r { animation: confused-b 3s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes confused-a { 0%,100% { transform: rotate(96deg); } 50% { transform: rotate(80deg); } }
+  @keyframes confused-b { 0%,100% { transform: rotate(-96deg); } 50% { transform: rotate(-80deg); } }
+  .head-scratch { animation: scratch 2s ease-in-out infinite; transform-origin: 60px 40px; }
+  @keyframes scratch { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(6deg); } }
+
+  /* bagel scene */
+  .bagel-float { animation: bagel-bob 3.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .bagel-float.bg2 { animation-delay: -1.1s; }
+  .bagel-float.bg3 { animation-delay: -2.2s; }
+  .bagel-float.bg4 { animation-delay: -0.6s; }
+  .bagel-float.bg5 { animation-delay: -1.8s; }
+  @keyframes bagel-bob { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-22px) rotate(4deg); } }
+  .chew { animation: chew-arm 1.6s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes chew-arm { 0%,100% { transform: rotate(-120deg); } 50% { transform: rotate(-146deg); } }
+  .day-empty { animation: day-blink 4s ease-in-out infinite; }
+  .day-empty.de2 { animation-delay: 0.5s; }
+  .day-empty.de3 { animation-delay: 1s; }
+  .day-empty.de4 { animation-delay: 1.5s; }
+  @keyframes day-blink { 0%,100% { opacity: 0.25; } 50% { opacity: 0.6; } }
+
+  /* poll scene */
+  .thinking-dots circle { animation: dot-fade 1.6s ease-in-out infinite; }
+  .thinking-dots circle:nth-child(2) { animation-delay: 0.25s; }
+  .thinking-dots circle:nth-child(3) { animation-delay: 0.5s; }
+  @keyframes dot-fade { 0%,100% { opacity: 0.2; } 50% { opacity: 1; } }
+  .shrug-l { animation: shr-a 2.6s ease-in-out infinite; transform-origin: 0 0; }
+  .shrug-r { animation: shr-b 2.6s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes shr-a { 0%,100% { transform: rotate(104deg); } 50% { transform: rotate(88deg); } }
+  @keyframes shr-b { 0%,100% { transform: rotate(-104deg); } 50% { transform: rotate(-88deg); } }
+
+  /* ---------- Walking challenge ---------- */
+  .day-cycle { animation: day-night 12s linear infinite; }
+  @keyframes day-night { to { transform: rotate(360deg); } }
+  .sky-wash { animation: sky-fade 12s ease-in-out infinite; }
+  @keyframes sky-fade { 0%, 40% { opacity: 0.045; } 55%, 90% { opacity: 0.012; } 100% { opacity: 0.045; } }
+  .hand-hour { animation: hand-turn 8s linear infinite; transform-origin: 440px 238px; }
+  .hand-min { animation: hand-turn 0.66s linear infinite; transform-origin: 440px 238px; }
+  @keyframes hand-turn { to { transform: rotate(360deg); } }
+  .road-dash { stroke-dasharray: 40 46; animation: road-move 0.7s linear infinite; }
+  @keyframes road-move { to { stroke-dashoffset: -86; } }
+  .walk-l { animation: walk-a 0.62s ease-in-out infinite; transform-origin: 0 0; }
+  .walk-r { animation: walk-b 0.62s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes walk-a { 0%,100% { transform: rotate(26deg); } 50% { transform: rotate(-26deg); } }
+  @keyframes walk-b { 0%,100% { transform: rotate(-26deg); } 50% { transform: rotate(26deg); } }
+  .swing-l { animation: swing-a 0.62s ease-in-out infinite; transform-origin: 0 0; }
+  .swing-r { animation: swing-b 0.62s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes swing-a { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(22deg); } }
+  @keyframes swing-b { 0%,100% { transform: rotate(22deg); } 50% { transform: rotate(-20deg); } }
+  .walk-bob { animation: walk-bounce 0.31s ease-in-out infinite; }
+  @keyframes walk-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+  .tree-pass { animation: tree-slide 4s linear infinite; }
+  .tree-pass.tp2 { animation-delay: -1.3s; }
+  .tree-pass.tp3 { animation-delay: -2.6s; }
+  @keyframes tree-slide { from { transform: translateX(1750px); } to { transform: translateX(-220px); } }
+
+  .step-readout { display: flex; align-items: baseline; gap: 0.7rem; margin-bottom: 1.4rem; opacity: 0; transform: translateY(12px); transition: opacity 0.6s ease 0.2s, transform 0.6s ease 0.2s; }
+  .in-view .step-readout { opacity: 1; transform: translateY(0); }
+  .step-readout .count { font-size: clamp(2.8rem, 7vw, 4.6rem); font-weight: 700; letter-spacing: -0.03em; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+  .step-readout .unit { font-size: 0.95rem; color: var(--muted); letter-spacing: 0.02em; }
+
+  /* finale: nervous + shivering */
+  .shiver { animation: shiver-leg 0.09s linear infinite; transform-origin: 0 0; }
+  .shiver.sv2 { animation-delay: -0.045s; }
+  @keyframes shiver-leg { 0%,100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+  .body-shake { animation: body-quiver 0.11s linear infinite; }
+  @keyframes body-quiver { 0%,100% { transform: translateX(-1.5px); } 50% { transform: translateX(1.5px); } }
+  .sweat-drop { animation: sweat-fall 2.6s ease-in infinite; }
+  .sweat-drop.sd2 { animation-delay: 1.3s; }
+  @keyframes sweat-fall { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 0.9; } 100% { opacity: 0; transform: translateY(90px); } }
+  .brow { animation: brow-raise 3s ease-in-out infinite; }
+  @keyframes brow-raise { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+  /* ---------- Token burn / fire ---------- */
+  .flame { animation: flicker 0.7s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+  .flame.fl-b { animation-delay: -0.23s; animation-duration: 0.55s; }
+  .flame.fl-c { animation-delay: -0.46s; animation-duration: 0.85s; }
+  .flame.fl-d { animation-delay: -0.12s; animation-duration: 0.62s; }
+  .flame.fl-e { animation-delay: -0.34s; animation-duration: 0.75s; }
+  @keyframes flicker {
+    0%, 100% { transform: scaleY(1) scaleX(1) translateY(0); opacity: 0.9; }
+    50% { transform: scaleY(1.22) scaleX(0.88) translateY(-6px); opacity: 1; }
+  }
+  .ember { animation: ember-rise 3s ease-out infinite; }
+  .ember.e2 { animation-delay: 0.6s; }
+  .ember.e3 { animation-delay: 1.2s; }
+  .ember.e4 { animation-delay: 1.8s; }
+  .ember.e5 { animation-delay: 2.4s; }
+  @keyframes ember-rise {
+    0% { opacity: 0; transform: translateY(0) translateX(0); }
+    20% { opacity: 0.9; }
+    100% { opacity: 0; transform: translateY(-190px) translateX(28px); }
+  }
+  .heat-glow { animation: heat-pulse 2.4s ease-in-out infinite; }
+  @keyframes heat-pulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+
+  .token-burn { display: flex; align-items: baseline; gap: 0.7rem; margin: 0 0 1.2rem; opacity: 0; transform: translateY(12px); transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s; }
+  .in-view .token-burn { opacity: 1; transform: translateY(0); }
+  .token-burn .tnum { font-size: clamp(2.2rem, 5.4vw, 3.4rem); font-weight: 700; letter-spacing: -0.03em; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1; }
+  .token-burn .tunit { font-size: 0.9rem; color: var(--muted); }
+
+  /* finale: sunrise + wave */
+  .wave-arm { animation: wave-hi 0.85s ease-in-out infinite; transform-origin: 0 0; }
+  @keyframes wave-hi { 0%,100% { transform: rotate(-128deg); } 50% { transform: rotate(-162deg); } }
+  .ray { animation: ray-pulse 4s ease-in-out infinite; }
+  .ray.r2 { animation-delay: 0.5s; }
+  .ray.r3 { animation-delay: 1s; }
+  .ray.r4 { animation-delay: 1.5s; }
+  .ray.r5 { animation-delay: 2s; }
+  @keyframes ray-pulse { 0%,100% { opacity: 0.15; } 50% { opacity: 0.5; } }
+
+  /* ---------- Interactive poll ---------- */
+  .poll { display: flex; flex-direction: column; gap: 0.7rem; max-width: 34rem; }
+  .poll-opt {
+    display: flex; align-items: center; gap: 0.9rem;
+    background: rgba(20,23,27,0.85); border: 1px solid var(--border); border-radius: 12px;
+    padding: 0.9rem 1.1rem; cursor: pointer; text-align: left; width: 100%;
+    color: var(--text); font-family: inherit; font-size: 0.95rem;
+    position: relative; overflow: hidden;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+    backdrop-filter: blur(6px);
+    opacity: 0; transform: translateY(14px);
+  }
+  .in-view .poll-opt { opacity: 1; transform: translateY(0); transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.2s ease; }
+  .in-view .poll-opt:nth-child(2) { transition-delay: 0.07s; }
+  .in-view .poll-opt:nth-child(3) { transition-delay: 0.14s; }
+  .in-view .poll-opt:nth-child(4) { transition-delay: 0.21s; }
+  .poll-opt:hover { border-color: var(--accent); transform: translateX(4px); }
+  .poll-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .poll-fill {
+    position: absolute; inset: 0 auto 0 0; width: 0%;
+    background: var(--accent-dim); border-right: 1px solid rgba(51,227,157,0.35);
+    transition: width 0.7s cubic-bezier(.4,0,.2,1); z-index: 0;
+  }
+  .poll-key {
+    position: relative; z-index: 1; flex: 0 0 auto;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 0.72rem; font-weight: 700;
+    width: 22px; height: 22px; border-radius: 6px; background: var(--border); color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .poll-label { position: relative; z-index: 1; flex: 1; }
+  .poll-pct { position: relative; z-index: 1; font-variant-numeric: tabular-nums; font-size: 0.85rem; color: var(--muted); opacity: 0; transition: opacity 0.4s ease; }
+  .poll.voted .poll-pct { opacity: 1; }
+  .poll-opt.picked { border-color: var(--accent); }
+  .poll-opt.picked .poll-key { background: var(--accent); color: var(--bg); }
+  .poll-hint { font-size: 0.82rem; color: var(--muted); font-style: italic; margin: 1rem 0 0; }
+
+  /* ---------- Closing ---------- */
+  .continue-line { width: 1px; height: 50px; margin: 1.8rem 0 0; background: repeating-linear-gradient(to bottom, var(--muted) 0 6px, transparent 6px 12px); opacity: 0; transition: opacity 1s ease 0.4s; }
+  .in-view .continue-line { opacity: 0.6; }
+  footer { padding: 4vh 0 8vh; text-align: center; font-size: 0.8rem; color: var(--muted); min-height: auto; max-height: none; display: block; }
+
+  /* ---------- Presenter chrome ---------- */
+  .dotnav { position: fixed; right: 1.3rem; top: 50%; transform: translateY(-50%); z-index: 95; display: flex; flex-direction: column; gap: 0.42rem; max-height: 78vh; }
+  .dotnav button { width: 6px; height: 6px; border-radius: 50%; border: none; background: var(--border); padding: 0; cursor: pointer; transition: background 0.2s ease, transform 0.2s ease; flex-shrink: 0; }
+  .dotnav button:hover { background: var(--muted); }
+  .dotnav button.active { background: var(--accent); transform: scale(1.6); }
+  .slide-counter { position: fixed; left: 1.6rem; bottom: 1.3rem; z-index: 95; font-size: 0.76rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .slide-counter b { color: var(--text); }
+  .fs-toggle { position: fixed; right: 1.6rem; bottom: 1.3rem; z-index: 95; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-size: 0.75rem; padding: 0.45rem 0.85rem; border-radius: 100px; cursor: pointer; transition: color 0.2s ease, border-color 0.2s ease; }
+  .fs-toggle:hover { color: var(--text); border-color: #3a4148; }
+  .fs-toggle:focus-visible, .dotnav button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 720px) { .dotnav { display: none; } }
+
+  /* ---------- Fit passes: compress on shorter viewports ---------- */
+  @media (max-height: 1100px) {
+    section { padding: 9.5vh 0 5vh; }
+    h2 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); margin-bottom: 1rem; }
+    .lede { font-size: 1rem; margin-bottom: 1.5rem; }
+    .cards { gap: 0.85rem; }
+    .card { padding: 1.1rem 1.35rem; }
+    .card-title { font-size: 1.05rem; }
+    .card-meta { margin-bottom: 0.55rem; font-size: 0.76rem; }
+    .card p { font-size: 0.88rem; }
+    .case { padding: 1.05rem 1.3rem; margin-bottom: 0.7rem; }
+    .case h3 { font-size: 0.98rem; margin-bottom: 0.5rem; }
+    .case-grid { gap: 1rem; }
+    .case-grid p { font-size: 0.82rem; }
+    .check-grid { gap: 0.55rem 1.6rem; }
+    .check-item { font-size: 0.85rem; }
+    .status-row { padding: 0.85rem 0; }
+    .status-desc { font-size: 0.86rem; }
+    .terminal-body { padding: 1rem 1.3rem; font-size: 0.78rem; line-height: 1.85; }
+    .scene-copy { padding: 0 6vw 6vh; }
+    .ghost-num { font-size: clamp(5rem, 15vw, 9rem); margin-bottom: 1.1rem; }
+    .chapter-name { font-size: clamp(1.9rem, 4.6vw, 2.9rem); }
+    .chapter-tag { font-size: 0.96rem; }
+    .board-panel .ticket .tdesc { font-size: 0.66rem; }
+    .poll-opt { padding: 0.7rem 0.95rem; font-size: 0.9rem; }
+    .poll { gap: 0.5rem; }
+    .pullquote { font-size: clamp(1rem, 1.9vw, 1.2rem); margin-top: 1.1rem; }
+    .chain .node { padding: 0.65rem 0.85rem; font-size: 0.8rem; }
+  }
+  @media (max-height: 760px) {
+    section { padding: 9vh 0 4vh; }
+    h2 { font-size: clamp(1.5rem, 3vw, 2rem); }
+    .lede { font-size: 0.94rem; margin-bottom: 1.2rem; }
+    .card { padding: 0.9rem 1.15rem; }
+    .card p { font-size: 0.84rem; }
+    .case { padding: 0.9rem 1.1rem; }
+    .terminal-body { font-size: 0.73rem; line-height: 1.75; }
+    .board-panel { padding: 0.85rem; }
+    .board-panel .ticket { padding: 0.34rem 0.48rem; }
+    .board-panel .ticket .tid { font-size: 0.66rem; }
+    .board-panel .ticket .tdesc { font-size: 0.62rem; line-height: 1.32; }
+    .step-readout .count { font-size: clamp(2rem, 5vw, 3rem); }
+    .token-burn .tnum { font-size: clamp(1.7rem, 4vw, 2.4rem); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .eyebrow, h2, .lede, .card, .case, .status-row, .continue-line, .ghost-num, .chapter-label,
+    .chapter-name, .chapter-tag, .terminal-body .line, .check-item, .spotlight, .chain .node,
+    .pullquote, .board-col, .floater, .poll-opt {
+      transition: none !important; opacity: 1 !important; transform: none !important;
+    }
+    .floater, .type-l, .type-r, .steam, .code-scroll, .cursor-blink, .lamp-glow, .carrier,
+    .step-l, .step-r, .box-fade-in, .box-fade-out, .gear, .belt-dash, .lever-arm, .stamp,
+    .led, .scanner, .clipboard-tick, .juggle-body, .j-arm-r, .j-arm-l, .jball, .flow,
+    .plug-arm, .pointer-arm, .pin-note, .wave-arm, .ray, .wheel-spin, .tower-car,
+    .jump, .dash, .dash-back, .dance, .spin-fig, .swipe-l, .swipe-r, .flail, .kick,
+    .qmark, .confused-l, .confused-r, .head-scratch, .bagel-float, .chew, .day-empty,
+    .thinking-dots circle, .shrug-l, .shrug-r, .shiver, .body-shake, .sweat-drop, .brow, .floater.scream,
+    .day-cycle, .sky-wash, .hand-hour, .hand-min, .road-dash, .walk-l, .walk-r,
+    .swing-l, .swing-r, .walk-bob, .tree-pass, .flame, .ember, .heat-glow {
+      animation: none !important;
+    }
+    .step-readout, .token-burn, .board-panel, .bridge-line, .cpanel, .step-box, .agent { transition: none !important; opacity: 1 !important; transform: none !important; }
+  }
+</style>
+
+<body>
+  <div id="progress"></div>
+  <div class="dotnav" id="dotnav" aria-label="Slide navigation"></div>
+  <div class="slide-counter" id="slideCounter"></div>
+  <button class="fs-toggle" id="fsToggle" type="button">Present ⤢</button>
+  <nav>
+    <div class="nav-inner">
+      <div class="brand">arctest<span>·</span>the story</div>
+      <div class="nav-links">
+        <a href="#crowd">Intro</a>
+        <a href="#migration-title">Migration</a>
+        <a href="#agents-build">Agents</a>
+        <a href="#bagels">Bagels</a>
+        <a href="#automation-title">Automation</a>
+        <a href="#coaster">Weekend</a>
+        <a href="#manual-title">Manual</a>
+        <a href="#poll-webox">Food</a>
+        <a href="#parallel-title">All At Once</a>
+        <a href="#steps">Steps</a>
+        <a href="#l3vpn-title">L3VPN</a>
+        <a href="#anpn">The Board</a>
+        <a href="#nervous">The End</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══ OPENING: the crowd ═══ -->
+  <section id="crowd" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <!-- the office -->
+      <g opacity="0.7">
+        <rect x="700" y="190" width="660" height="610" rx="8" fill="rgba(20,23,27,0.55)" stroke="var(--border)" stroke-width="3" />
+        <line class="struct" x1="672" y1="190" x2="1388" y2="190" />
+        <!-- window grid -->
+        <g class="struct-thin">
+          <line x1="700" y1="300" x2="1360" y2="300" />
+          <line x1="700" y1="410" x2="1360" y2="410" />
+          <line x1="700" y1="520" x2="1360" y2="520" />
+          <line x1="700" y1="630" x2="1360" y2="630" />
+          <line x1="865" y1="190" x2="865" y2="800" />
+          <line x1="1030" y1="190" x2="1030" y2="800" />
+          <line x1="1195" y1="190" x2="1195" y2="800" />
+        </g>
+        <!-- a few lit windows -->
+        <g fill="var(--accent)">
+          <rect class="led" x="720" y="222" width="125" height="58" rx="3" opacity="0.16" />
+          <rect class="led l3" x="885" y="332" width="125" height="58" rx="3" opacity="0.16" />
+          <rect class="led l5" x="1215" y="222" width="125" height="58" rx="3" opacity="0.16" />
+          <rect class="led l2" x="1050" y="442" width="125" height="58" rx="3" opacity="0.16" />
+          <rect class="led l4" x="720" y="552" width="125" height="58" rx="3" opacity="0.16" />
+          <rect class="led l6" x="1215" y="442" width="125" height="58" rx="3" opacity="0.16" />
+        </g>
+        <!-- sign -->
+        <rect class="struct-thin" x="902" y="112" width="256" height="52" rx="8" />
+        <text x="1030" y="147" class="label-svg accent" style="font-size:27px; letter-spacing:9px;">ARRCUS</text>
+      </g>
+
+      <!-- jumpers -->
+      <g class="fig fig-sm crowd-unit jump" transform="translate(760,0)">
+        <circle class="head" cx="0" cy="600" r="20" />
+        <line class="limb" x1="0" y1="620" x2="0" y2="700" />
+        <line class="limb" x1="0" y1="634" x2="-32" y2="596" /><line class="limb" x1="0" y1="634" x2="32" y2="596" />
+        <line class="limb" x1="0" y1="700" x2="-20" y2="760" /><line class="limb" x1="0" y1="700" x2="20" y2="760" />
+      </g>
+      <g class="fig fig-sm crowd-unit jump j2" transform="translate(1420,0)">
+        <circle class="head" cx="0" cy="590" r="20" />
+        <line class="limb" x1="0" y1="610" x2="0" y2="690" />
+        <line class="limb" x1="0" y1="624" x2="-32" y2="586" /><line class="limb" x1="0" y1="624" x2="32" y2="586" />
+        <line class="limb" x1="0" y1="690" x2="-20" y2="752" /><line class="limb" x1="0" y1="690" x2="20" y2="752" />
+      </g>
+      <g class="fig fig-sm crowd-unit jump j3" transform="translate(880,0)">
+        <circle class="head" cx="0" cy="560" r="19" />
+        <line class="limb" x1="0" y1="579" x2="0" y2="654" />
+        <line class="limb" x1="0" y1="592" x2="-30" y2="556" /><line class="limb" x1="0" y1="592" x2="30" y2="556" />
+        <line class="limb" x1="0" y1="654" x2="-19" y2="712" /><line class="limb" x1="0" y1="654" x2="19" y2="712" />
+      </g>
+
+      <!-- dancers -->
+      <g class="crowd-unit dance" transform="translate(940,0)">
+        <g class="fig fig-sm">
+          <circle class="head" cx="0" cy="620" r="20" />
+          <line class="limb" x1="0" y1="640" x2="0" y2="720" />
+          <g transform="translate(0,656)"><g class="flail"><line class="limb" x1="0" y1="0" x2="34" y2="34" /></g></g>
+          <g transform="translate(0,656)"><g class="flail fl2"><line class="limb" x1="0" y1="0" x2="-34" y2="34" /></g></g>
+          <line class="limb" x1="0" y1="720" x2="-20" y2="782" /><line class="limb" x1="0" y1="720" x2="20" y2="782" />
+        </g>
+      </g>
+      <g class="crowd-unit dance dc2" transform="translate(1180,0)">
+        <g class="fig fig-sm">
+          <circle class="head" cx="0" cy="628" r="20" />
+          <line class="limb" x1="0" y1="648" x2="0" y2="724" />
+          <g transform="translate(0,662)"><g class="flail fl2"><line class="limb" x1="0" y1="0" x2="34" y2="34" /></g></g>
+          <g transform="translate(0,662)"><g class="flail"><line class="limb" x1="0" y1="0" x2="-34" y2="34" /></g></g>
+          <line class="limb" x1="0" y1="724" x2="-20" y2="784" /><line class="limb" x1="0" y1="724" x2="20" y2="784" />
+        </g>
+      </g>
+
+      <!-- the "fight": two figures swiping at each other -->
+      <g transform="translate(1090,0)">
+        <g class="fig fig-sm">
+          <circle class="head" cx="0" cy="622" r="20" />
+          <line class="limb" x1="0" y1="642" x2="0" y2="718" />
+          <g transform="translate(0,656)"><g class="swipe-l"><line class="limb" x1="0" y1="0" x2="52" y2="6" /></g></g>
+          <line class="limb" x1="0" y1="656" x2="-30" y2="700" />
+          <line class="limb" x1="0" y1="718" x2="-22" y2="782" />
+          <g transform="translate(0,718)"><g class="kick"><line class="limb" x1="0" y1="0" x2="26" y2="64" /></g></g>
+        </g>
+        <g class="fig fig-sm" transform="translate(150,0)">
+          <circle class="head" cx="0" cy="622" r="20" />
+          <line class="limb" x1="0" y1="642" x2="0" y2="718" />
+          <g transform="translate(0,656)"><g class="swipe-r"><line class="limb" x1="0" y1="0" x2="-52" y2="6" /></g></g>
+          <line class="limb" x1="0" y1="656" x2="30" y2="700" />
+          <line class="limb" x1="0" y1="718" x2="22" y2="782" />
+          <line class="limb" x1="0" y1="718" x2="-22" y2="782" />
+        </g>
+        <text x="75" y="576" class="label-svg" style="font-size:26px; letter-spacing:1px;">!</text>
+      </g>
+
+      <!-- runners crossing -->
+      <g class="dash">
+        <g class="fig fig-sm">
+          <circle class="head" cx="0" cy="640" r="19" />
+          <line class="limb" x1="0" y1="659" x2="0" y2="726" />
+          <line class="limb" x1="0" y1="672" x2="34" y2="700" /><line class="limb" x1="0" y1="672" x2="-34" y2="644" />
+          <g transform="translate(0,726)"><g class="step-r"><line class="limb" x1="0" y1="0" x2="26" y2="60" /></g></g>
+          <g transform="translate(0,726)"><g class="step-l"><line class="limb" x1="0" y1="0" x2="-26" y2="60" /></g></g>
+        </g>
+      </g>
+      <g class="dash d-b">
+        <g class="fig fig-sm" transform="translate(0,-60)">
+          <circle class="head" cx="0" cy="640" r="18" />
+          <line class="limb" x1="0" y1="658" x2="0" y2="722" />
+          <line class="limb" x1="0" y1="670" x2="32" y2="698" /><line class="limb" x1="0" y1="670" x2="-32" y2="642" />
+          <g transform="translate(0,722)"><g class="step-l"><line class="limb" x1="0" y1="0" x2="24" y2="58" /></g></g>
+          <g transform="translate(0,722)"><g class="step-r"><line class="limb" x1="0" y1="0" x2="-24" y2="58" /></g></g>
+        </g>
+      </g>
+      <g class="dash-back">
+        <g class="fig fig-sm" transform="translate(0,20)">
+          <circle class="head" cx="0" cy="640" r="19" />
+          <line class="limb" x1="0" y1="659" x2="0" y2="726" />
+          <line class="limb" x1="0" y1="672" x2="-34" y2="700" /><line class="limb" x1="0" y1="672" x2="34" y2="644" />
+          <g transform="translate(0,726)"><g class="step-r"><line class="limb" x1="0" y1="0" x2="26" y2="60" /></g></g>
+          <g transform="translate(0,726)"><g class="step-l"><line class="limb" x1="0" y1="0" x2="-26" y2="60" /></g></g>
+        </g>
+      </g>
+
+      <!-- cartwheeling figure -->
+      <g transform="translate(1000,660)">
+        <g class="spin-fig">
+          <g class="fig fig-sm">
+            <circle class="head" cx="0" cy="-52" r="17" />
+            <line class="limb" x1="0" y1="-35" x2="0" y2="30" />
+            <line class="limb" x1="0" y1="-22" x2="-30" y2="6" /><line class="limb" x1="0" y1="-22" x2="30" y2="6" />
+            <line class="limb" x1="0" y1="30" x2="-22" y2="66" /><line class="limb" x1="0" y1="30" x2="22" y2="66" />
+          </g>
+        </g>
+      </g>
+
+      <!-- arms-up celebrator -->
+      <g class="fig fig-sm" transform="translate(1310,0)">
+        <circle class="head" cx="0" cy="630" r="20" />
+        <line class="limb" x1="0" y1="650" x2="0" y2="726" />
+        <line class="limb" x1="0" y1="664" x2="-36" y2="612" /><line class="limb" x1="0" y1="664" x2="36" y2="612" />
+        <line class="limb" x1="0" y1="726" x2="-22" y2="788" /><line class="limb" x1="0" y1="726" x2="22" y2="788" />
+      </g>
+    </svg>
+
+    <div class="scene-copy">
+      <h2 style="max-width:22ch;">A lot of people work here.</h2>
+      <p class="lede">Everyone's running somewhere. Everyone's mid-something. Somewhere in this building, three racks are already booked.</p>
+    </div>
+  </section>
+
+  <!-- ═══ OPENING: zoom to one ═══ -->
+  <section id="zoom-one" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+
+      <!-- faded background crowd -->
+      <g opacity="0.12">
+        <g class="fig fig-sm" transform="translate(240,0)">
+          <circle class="head" cx="0" cy="640" r="18" /><line class="limb" x1="0" y1="658" x2="0" y2="724" />
+          <line class="limb" x1="0" y1="670" x2="-28" y2="700" /><line class="limb" x1="0" y1="670" x2="28" y2="700" />
+          <line class="limb" x1="0" y1="724" x2="-20" y2="782" /><line class="limb" x1="0" y1="724" x2="20" y2="782" />
+        </g>
+        <g class="fig fig-sm" transform="translate(400,0)">
+          <circle class="head" cx="0" cy="646" r="18" /><line class="limb" x1="0" y1="664" x2="0" y2="728" />
+          <line class="limb" x1="0" y1="676" x2="-28" y2="706" /><line class="limb" x1="0" y1="676" x2="28" y2="706" />
+          <line class="limb" x1="0" y1="728" x2="-20" y2="784" /><line class="limb" x1="0" y1="728" x2="20" y2="784" />
+        </g>
+        <g class="fig fig-sm" transform="translate(1300,0)">
+          <circle class="head" cx="0" cy="640" r="18" /><line class="limb" x1="0" y1="658" x2="0" y2="724" />
+          <line class="limb" x1="0" y1="670" x2="-28" y2="700" /><line class="limb" x1="0" y1="670" x2="28" y2="700" />
+          <line class="limb" x1="0" y1="724" x2="-20" y2="782" /><line class="limb" x1="0" y1="724" x2="20" y2="782" />
+        </g>
+        <g class="fig fig-sm" transform="translate(1450,0)">
+          <circle class="head" cx="0" cy="648" r="18" /><line class="limb" x1="0" y1="666" x2="0" y2="730" />
+          <line class="limb" x1="0" y1="678" x2="-28" y2="708" /><line class="limb" x1="0" y1="678" x2="28" y2="708" />
+          <line class="limb" x1="0" y1="730" x2="-20" y2="786" /><line class="limb" x1="0" y1="730" x2="20" y2="786" />
+        </g>
+      </g>
+
+      <!-- spotlight -->
+      <ellipse cx="800" cy="700" rx="290" ry="110" fill="var(--accent)" opacity="0.06" />
+
+      <!-- the one, confused -->
+      <g transform="translate(800,0)">
+        <text class="qmark" x="0" y="380" text-anchor="middle"
+              style="fill: var(--accent); font-family: -apple-system, sans-serif; font-size: 190px; font-weight: 700;">?</text>
+        <g class="fig">
+          <g class="head-scratch" style="transform-origin: 0px 480px;">
+            <circle class="head" cx="0" cy="480" r="32" />
+            <circle class="eye" cx="-11" cy="474" r="3.5" /><circle class="eye" cx="11" cy="474" r="3.5" />
+            <path class="limb" d="M-12,496 Q0,490 12,496" stroke-width="4" />
+          </g>
+          <line class="limb" x1="0" y1="512" x2="0" y2="650" />
+          <g transform="translate(0,542)"><g class="confused-r"><line class="limb" x1="0" y1="0" x2="0" y2="66" /></g></g>
+          <g transform="translate(0,542)"><g class="confused-l"><line class="limb" x1="0" y1="0" x2="0" y2="66" /></g></g>
+          <line class="limb" x1="0" y1="650" x2="-30" y2="780" />
+          <line class="limb" x1="0" y1="650" x2="30" y2="780" />
+        </g>
+      </g>
+    </svg>
+
+    <div class="floaters rim">
+      <span class="floater f1">who?</span>
+      <span class="floater f5">new guy?</span>
+      <span class="floater f11">?</span>
+    </div>
+
+    <div class="scene-copy">
+      <h2 style="max-width:20ch;">But let's follow this one.</h2>
+    </div>
+  </section>
+
+  <!-- ═══ OPENING: who is he ═══ -->
+  <section id="before-arrcus" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <ellipse cx="800" cy="700" rx="290" ry="110" fill="var(--accent)" opacity="0.05" />
+      <g transform="translate(800,0)">
+        <g class="fig">
+          <circle class="head" cx="0" cy="480" r="32" />
+          <circle class="eye" cx="-11" cy="474" r="3.5" /><circle class="eye" cx="11" cy="474" r="3.5" />
+          <path class="limb" d="M-13,494 Q0,506 13,494" stroke-width="4" />
+          <line class="limb" x1="0" y1="512" x2="0" y2="650" />
+          <line class="limb" x1="0" y1="544" x2="-46" y2="616" />
+          <line class="limb" x1="0" y1="544" x2="46" y2="616" />
+          <line class="limb" x1="0" y1="650" x2="-30" y2="780" />
+          <line class="limb" x1="0" y1="650" x2="30" y2="780" />
+        </g>
+      </g>
+    </svg>
+
+    <div class="floaters rim">
+      <span class="floater f1 hot">SJSU</span>
+      <span class="floater f2">GYM</span>
+      <span class="floater f3">CRICKET</span>
+      <span class="floater f4">MOVIES</span>
+      <span class="floater f5 hot">ROAD TRIPS</span>
+      <span class="floater f6">COFFEE</span>
+      <span class="floater f7">HIKING</span>
+      <span class="floater f8">MASTER'S</span>
+      <span class="floater f9">NETWORKING</span>
+      <span class="floater f10">FRIENDS</span>
+      <span class="floater f11">WEEKEND PLANS</span>
+      <span class="floater f12 hot">CURIOSITY</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">Before all this</div>
+      <h2>Grad student. Gym rat. Terrible at cricket.</h2>
+      <p class="lede">San José State, a lot of movies, a lot of road trips, and a growing suspicion that networking was more interesting than it looked.</p>
+    </div>
+  </section>
+
+  <!-- ═══ OPENING: the name ═══ -->
+  <section id="name-intro" class="chapter-title">
+    <div class="wrap">
+      <div class="chapter-label">And then</div>
+      <h2 class="chapter-name" style="font-size: clamp(2.6rem, 7vw, 4.6rem);">Hi, I'm Siva.</h2>
+      <p class="chapter-tag">Ten weeks ago I joined Arrcus as an intern and didn't know what a TLV-13 purge was.</p>
+    </div>
+  </section>
+
+  <!-- ═══ PROLOGUE: at the desk ═══ -->
+  <section id="prologue" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <circle class="sky-dot" cx="180" cy="90" r="2" /><circle class="sky-dot" cx="1380" cy="70" r="2" />
+      <circle class="sky-dot" cx="1480" cy="180" r="2" /><circle class="sky-dot" cx="120" cy="200" r="2" />
+
+      <!-- lamp glow -->
+      <defs>
+        <radialGradient id="lampGrad">
+          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.30" />
+          <stop offset="60%" stop-color="var(--accent)" stop-opacity="0.08" />
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0" />
+        </radialGradient>
+      </defs>
+      <ellipse class="lamp-glow" cx="1090" cy="530" rx="260" ry="205" fill="url(#lampGrad)" />
+
+      <!-- desk -->
+      <line class="struct" x1="620" y1="700" x2="1360" y2="700" />
+      <line class="struct-thin" x1="680" y1="700" x2="680" y2="830" />
+      <line class="struct-thin" x1="1300" y1="700" x2="1300" y2="830" />
+
+      <!-- monitor -->
+      <rect class="struct" x="900" y="430" width="330" height="220" rx="10" />
+      <line class="struct-thin" x1="1065" y1="650" x2="1065" y2="690" />
+      <line class="struct-thin" x1="1020" y1="692" x2="1110" y2="692" />
+      <clipPath id="screenClip"><rect x="912" y="442" width="306" height="196" rx="6" /></clipPath>
+      <g clip-path="url(#screenClip)">
+        <rect x="912" y="442" width="306" height="196" fill="rgba(51,227,157,0.05)" />
+        <g class="code-scroll">
+          <g fill="var(--accent)" opacity="0.6">
+            <rect x="928" y="458" width="96" height="5" rx="2.5" />
+            <rect x="928" y="476" width="150" height="5" rx="2.5" />
+            <rect x="944" y="494" width="118" height="5" rx="2.5" />
+            <rect x="944" y="512" width="176" height="5" rx="2.5" />
+            <rect x="928" y="530" width="72" height="5" rx="2.5" />
+            <rect x="928" y="548" width="140" height="5" rx="2.5" />
+            <rect x="944" y="566" width="102" height="5" rx="2.5" />
+            <rect x="944" y="584" width="164" height="5" rx="2.5" />
+            <rect x="928" y="602" width="88" height="5" rx="2.5" />
+            <rect x="928" y="620" width="132" height="5" rx="2.5" />
+            <rect x="944" y="638" width="110" height="5" rx="2.5" />
+            <rect x="944" y="656" width="158" height="5" rx="2.5" />
+            <rect x="928" y="674" width="80" height="5" rx="2.5" />
+            <rect x="928" y="692" width="146" height="5" rx="2.5" />
+          </g>
+        </g>
+        <rect class="cursor-blink accent-fill" x="1130" y="600" width="8" height="12" />
+      </g>
+
+      <!-- keyboard -->
+      <rect class="struct-thin" x="880" y="672" width="170" height="16" rx="4" />
+
+      <!-- coffee mug + steam -->
+      <path class="struct" d="M700,650 L700,694 Q700,700 708,700 L748,700 Q756,700 756,694 L756,650 Z" />
+      <path class="struct-thin" d="M756,660 Q778,660 778,676 Q778,690 756,690" />
+      <g stroke="var(--accent)" stroke-width="3" stroke-linecap="round" fill="none" opacity="0">
+        <path class="steam" d="M714,640 Q722,626 714,614 Q706,602 714,590" />
+        <path class="steam s2" d="M728,644 Q736,630 728,618 Q720,606 728,594" />
+        <path class="steam s3" d="M742,640 Q750,626 742,614 Q734,602 742,590" />
+      </g>
+
+      <!-- the person -->
+      <g class="fig">
+        <circle class="head" cx="820" cy="498" r="30" />
+        <circle class="eye" cx="832" cy="494" r="3" />
+        <circle class="eye" cx="812" cy="494" r="3" />
+        <line class="limb" x1="820" y1="528" x2="820" y2="660" />
+        <g transform="translate(820,556)"><g class="type-r"><line class="limb" x1="0" y1="0" x2="86" y2="112" /></g></g>
+        <g transform="translate(820,556)"><g class="type-l"><line class="limb" x1="0" y1="0" x2="52" y2="120" /></g></g>
+        <!-- chair -->
+        <line class="struct" x1="770" y1="660" x2="770" y2="500" />
+        <line class="struct" x1="770" y1="660" x2="840" y2="660" />
+        <line class="struct-thin" x1="800" y1="660" x2="800" y2="830" />
+        <line class="struct-thin" x1="756" y1="836" x2="844" y2="836" />
+      </g>
+
+    </svg>
+
+    <div class="floaters rim">
+      <span class="floater f1">ISIS</span>
+      <span class="floater f2">BGP</span>
+      <span class="floater f3 hot">TLV-13?</span>
+      <span class="floater f4">gNMI</span>
+      <span class="floater f5">SRv6</span>
+      <span class="floater f7">L3VPN</span>
+      <span class="floater f8">RFC 6232</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">Day one at Arrcus</div>
+      <h2>Badge, laptop, and a very long wiki page.</h2>
+      <p class="lede">This is the story of what happened next — one bug, one lab reservation, and one roller coaster at a time.</p>
+    </div>
+  </section>
+
+  <!-- ═══ CHAPTER 01 ═══ -->
+  <section id="migration-title" class="chapter-title">
+    <div class="floaters rim">
+      <span class="floater f1">Isis.robot</span>
+      <span class="floater f2">Gnmi.robot</span>
+      <span class="floater f5">Stp.robot</span>
+      <span class="floater f8 hot">→ arctest</span>
+    </div>
+    <div class="wrap">
+      <div class="ghost-num">01</div>
+      <div class="chapter-label">Chapter One</div>
+      <h2 class="chapter-name">Migration</h2>
+      <p class="chapter-tag">Suites that already worked in Robot Framework — carried into arctest without losing a single assertion.</p>
+    </div>
+  </section>
+
+  <section id="migration" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+
+      <!-- source shelf -->
+      <g>
+        <line class="struct" x1="620" y1="420" x2="820" y2="420" />
+        <line class="struct" x1="620" y1="560" x2="820" y2="560" />
+        <line class="struct-thin" x1="620" y1="420" x2="620" y2="790" />
+        <line class="struct-thin" x1="820" y1="420" x2="820" y2="790" />
+        <g class="box-fade-out">
+          <rect class="struct-thin" x="640" y="372" width="52" height="46" rx="4" />
+          <rect class="struct-thin" x="706" y="372" width="52" height="46" rx="4" />
+          <rect class="struct-thin" x="640" y="512" width="52" height="46" rx="4" />
+        </g>
+        <text class="label-svg" x="720" y="620">.robot</text>
+      </g>
+
+      <!-- target shelf -->
+      <g>
+        <line class="accent-stroke" x1="1200" y1="420" x2="1400" y2="420" />
+        <line class="accent-stroke" x1="1200" y1="560" x2="1400" y2="560" />
+        <line class="struct-thin" x1="1200" y1="420" x2="1200" y2="790" />
+        <line class="struct-thin" x1="1400" y1="420" x2="1400" y2="790" />
+        <g class="box-fade-in">
+          <rect class="accent-stroke" x="1220" y="372" width="52" height="46" rx="4" />
+          <rect class="accent-stroke" x="1286" y="372" width="52" height="46" rx="4" />
+          <rect class="accent-stroke" x="1220" y="512" width="52" height="46" rx="4" />
+        </g>
+        <text class="label-svg accent" x="1300" y="620">arctest</text>
+      </g>
+
+      <!-- carrier -->
+      <g class="carrier">
+        <g class="fig" transform="translate(420,0)">
+          <circle class="head" cx="0" cy="470" r="28" />
+          <circle class="eye" cx="-9" cy="466" r="3" /><circle class="eye" cx="9" cy="466" r="3" />
+          <line class="limb" x1="0" y1="498" x2="0" y2="646" />
+          <rect class="accent-stroke" x="-34" y="524" width="68" height="56" rx="5" />
+          <line class="limb" x1="0" y1="524" x2="-40" y2="566" />
+          <line class="limb" x1="0" y1="524" x2="40" y2="566" />
+          <g transform="translate(0,646)"><g class="step-r"><line class="limb" x1="0" y1="0" x2="24" y2="98" /></g></g>
+          <g transform="translate(0,646)"><g class="step-l"><line class="limb" x1="0" y1="0" x2="-24" y2="98" /></g></g>
+        </g>
+      </g>
+    </svg>
+
+    <div class="floaters">
+      <span class="floater f4">Server config</span>
+      <span class="floater f2 hot">Subscribe RPC</span>
+      <span class="floater f6">ISIS-MIB</span>
+      <span class="floater f5">SNMPv2c</span>
+      <span class="floater f9">Capability RPC</span>
+      <span class="floater f11">Bridge assurance</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">Robot Framework → arctest</div>
+      <h2>Nothing gets lost in translation.</h2>
+      <div class="cards">
+        <div class="card">
+          <h3 class="card-title">gnmi-suites</h3>
+          <div class="card-meta"><code>TST-9038</code> · from <code>Gnmi.robot</code></div>
+          <p>gNMI server config, capability negotiation, Subscribe RPC, and routing telemetry over ISIS/BGP. Device-level auth-enforcement gaps documented for an ArcOS fix rather than papered over in the test.</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">stp-suites</h3>
+          <div class="card-meta"><code>TST-9041</code> · from <code>Stp.robot</code></div>
+          <p>Config validation proven on the container lab. The convergence half — port-role changes, root/BPDU guard, bridge assurance — waits on an LACP-capable ring. Left active rather than skipped: the blocker is hardware, not the test.</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">isis-snmp-v2c-suite</h3>
+          <div class="card-meta"><code>TST-9050</code> · from <code>Isis.robot</code></div>
+          <p>SNMPv2c validation against ISIS-MIB, faithful to the original assertions and proven in two halves — the VM proves SNMP, Docker proves adjacency, because no single lab does both.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ AGENTS: authoring ═══ -->
+  <section id="agents-build">
+    <div class="floaters rim">
+      <span class="floater f2">YAML</span>
+      <span class="floater f9">scaffold</span>
+    </div>
+    <div class="wrap agents-wrap">
+      <div class="eyebrow">How the volume was possible</div>
+      <h2 style="margin-bottom:0.9rem;">I didn't hand-write all of that.</h2>
+      <p class="lede" style="margin-bottom:1.5rem;">arctest ships an agent toolchain, and each one owns a single artifact type. Porting a suite means feeding the right agent the right input — and knowing enough to check what comes back.</p>
+
+      <div class="agents">
+        <div class="agent">
+          <div class="agent-name">Robot migrator</div>
+          <p>Converts <code>.robot</code> files into arctest YAML — maps old keywords onto framework actions, reports what has no equivalent yet, then generates iteratively.</p>
+        </div>
+        <div class="agent">
+          <div class="agent-name">Topology builder</div>
+          <p>Authors the logical topology: network roles, which config template each role gets, and the variables they share.</p>
+        </div>
+        <div class="agent">
+          <div class="agent-name">Testbed builder</div>
+          <p>Wires that logical topology onto real lab devices — hostnames, IPs, credentials, interface mappings.</p>
+        </div>
+        <div class="agent">
+          <div class="agent-name">Suite orchestrator</div>
+          <p>Turns a plain-language test plan into suite YAML, validated against the action registry so it can't invent steps that don't exist.</p>
+        </div>
+      </div>
+
+      <p class="note" style="margin-top:1.2rem;">The split matters: one topology, many testbeds. The logical design is written once, then mapped onto whichever rack is actually free.</p>
+    </div>
+  </section>
+
+  <!-- ═══ BRIDGE: migration → automation ═══ -->
+  <section id="bridge1" class="bridge">
+    <div class="floaters rim">
+      <span class="floater f2">green ≠ correct</span>
+      <span class="floater f9">assertion</span>
+    </div>
+    <div class="wrap">
+      <div class="eyebrow">What migration taught me</div>
+      <h2 class="statement">A test that passes isn't the same as a test that's&nbsp;true.</h2>
+      <p class="lede">Porting a suite means reading every assertion closely enough to move it. Which is also close enough to notice when one was never really checking anything.</p>
+
+      <div class="compare">
+        <div class="cpanel">
+          <div class="cpanel-label">What the suite reported</div>
+          <div class="verdict-row"><span class="verdict pass">PASS</span><span class="verdict-note">for two years</span></div>
+          <div class="cpanel-line mono warnline">device replied: "No Such Object"</div>
+          <p class="cpanel-cap">The device said it didn't have the value. The validator counted that as a match.</p>
+        </div>
+        <div class="cdivider" aria-hidden="true">→</div>
+        <div class="cpanel">
+          <div class="cpanel-label">What it reports now</div>
+          <div class="verdict-row"><span class="verdict fail">FAIL</span><span class="verdict-note">correctly</span></div>
+          <div class="cpanel-line mono">expected 3 · got "No Such Object"</div>
+          <p class="cpanel-cap">Hard-fail on error sentinels, and actually compare against the expected value instead of ignoring it.</p>
+        </div>
+      </div>
+
+      <p class="bridge-line">Which raises the obvious problem. If a suite that already exists can quietly stop testing anything — <strong>you'd better be able to build one from scratch.</strong></p>
+    </div>
+  </section>
+
+<!-- ═══ INTERLUDE: the bagel agenda ═══ -->
+  <section id="bagels" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+
+      <!-- week strip: Monday full, rest empty -->
+      <g transform="translate(150,180)">
+        <text class="label-svg accent" x="70" y="0" style="font-size:17px; letter-spacing:2px;">MON</text>
+        <circle class="accent-stroke" cx="70" cy="70" r="42" stroke-width="5" />
+        <circle class="accent-stroke" cx="70" cy="70" r="15" stroke-width="5" />
+
+        <text class="label-svg" x="230" y="0" style="font-size:17px; letter-spacing:2px;">TUE</text>
+        <g class="day-empty"><circle class="struct-thin" cx="230" cy="70" r="42" stroke-dasharray="5 7" /></g>
+
+        <text class="label-svg" x="390" y="0" style="font-size:17px; letter-spacing:2px;">WED</text>
+        <g class="day-empty de2"><circle class="struct-thin" cx="390" cy="70" r="42" stroke-dasharray="5 7" /></g>
+
+        <text class="label-svg" x="550" y="0" style="font-size:17px; letter-spacing:2px;">THU</text>
+        <g class="day-empty de3"><circle class="struct-thin" cx="550" cy="70" r="42" stroke-dasharray="5 7" /></g>
+
+        <text class="label-svg" x="710" y="0" style="font-size:17px; letter-spacing:2px;">FRI</text>
+        <g class="day-empty de4"><circle class="struct-thin" cx="710" cy="70" r="42" stroke-dasharray="5 7" /></g>
+      </g>
+
+      <!-- floating bagels (the proposal) -->
+      <g>
+        <g class="bagel-float"><circle class="accent-stroke" cx="1180" cy="300" r="38" stroke-width="5" /><circle class="accent-stroke" cx="1180" cy="300" r="13" stroke-width="5" /></g>
+        <g class="bagel-float bg2"><circle class="accent-stroke" cx="1330" cy="400" r="32" stroke-width="5" /><circle class="accent-stroke" cx="1330" cy="400" r="11" stroke-width="5" /></g>
+        <g class="bagel-float bg3"><circle class="accent-stroke" cx="1080" cy="440" r="28" stroke-width="4" /><circle class="accent-stroke" cx="1080" cy="440" r="10" stroke-width="4" /></g>
+        <g class="bagel-float bg4"><circle class="accent-stroke" cx="1420" cy="270" r="26" stroke-width="4" /><circle class="accent-stroke" cx="1420" cy="270" r="9" stroke-width="4" /></g>
+        <g class="bagel-float bg5"><circle class="accent-stroke" cx="1270" cy="520" r="24" stroke-width="4" /><circle class="accent-stroke" cx="1270" cy="520" r="8" stroke-width="4" /></g>
+      </g>
+
+      <!-- happy figure mid-bite -->
+      <g transform="translate(1220,0)">
+        <g class="fig">
+          <circle class="head" cx="0" cy="620" r="32" />
+          <circle class="eye" cx="-11" cy="612" r="3.5" /><circle class="eye" cx="11" cy="612" r="3.5" />
+          <path class="limb" d="M-14,630 Q0,646 14,630" stroke-width="4" />
+          <line class="limb" x1="0" y1="652" x2="0" y2="710" />
+          <g transform="translate(0,672)"><g class="chew"><line class="limb" x1="0" y1="0" x2="52" y2="10" /></g></g>
+          <line class="limb" x1="0" y1="672" x2="-48" y2="716" />
+          <line class="limb" x1="0" y1="710" x2="-28" y2="800" />
+          <line class="limb" x1="0" y1="710" x2="28" y2="800" />
+        </g>
+      </g>
+    </svg>
+
+    <div class="floaters">
+      <span class="floater f1 hot">EVERY DAY</span>
+      <span class="floater f3">not just Monday</span>
+      <span class="floater f8">sesame</span>
+      <span class="floater f10">everything bagel</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">One small proposal</div>
+      <h2>Bagels should be every day.</h2>
+      <p class="lede">Not only on Mondays. I've thought about this more than I've thought about some of the test cases, and I stand by it. Tuesday through Friday deserve better.</p>
+    </div>
+  </section>
+
+  <!-- ═══ CHAPTER 02 ═══ -->
+  <section id="automation-title" class="chapter-title">
+    <div class="floaters rim">
+      <span class="floater f2 hot">RFC 6232 §2</span>
+      <span class="floater f3">purge</span>
+      <span class="floater f5">soft-reconfig</span>
+      <span class="floater f8">interop</span>
+    </div>
+    <div class="wrap">
+      <div class="ghost-num">02</div>
+      <div class="chapter-label">Chapter Two</div>
+      <h2 class="chapter-name">Automation</h2>
+      <p class="chapter-tag">No prior suite to lean on. These had to be built from a spec, a manual test case, and a lot of tight-polling.</p>
+    </div>
+  </section>
+
+  <section id="automation" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+
+      <!-- machine housing -->
+      <rect class="struct" x="880" y="300" width="480" height="300" rx="14" />
+      <g class="gear" style="transform-origin: 990px 400px;">
+        <circle class="accent-stroke" cx="990" cy="400" r="52" />
+        <g stroke="var(--accent)" stroke-width="3">
+          <line x1="990" y1="336" x2="990" y2="358" /><line x1="990" y1="442" x2="990" y2="464" />
+          <line x1="926" y1="400" x2="948" y2="400" /><line x1="1032" y1="400" x2="1054" y2="400" />
+          <line x1="945" y1="355" x2="960" y2="370" /><line x1="1020" y1="430" x2="1035" y2="445" />
+          <line x1="1035" y1="355" x2="1020" y2="370" /><line x1="960" y1="430" x2="945" y2="445" />
+        </g>
+      </g>
+      <g class="gear ccw" style="transform-origin: 1120px 470px;">
+        <circle class="struct" cx="1120" cy="470" r="38" />
+        <g stroke="var(--border)" stroke-width="3">
+          <line x1="1120" y1="422" x2="1120" y2="440" /><line x1="1120" y1="500" x2="1120" y2="518" />
+          <line x1="1072" y1="470" x2="1090" y2="470" /><line x1="1150" y1="470" x2="1168" y2="470" />
+        </g>
+      </g>
+      <g class="gear" style="transform-origin: 1250px 390px;">
+        <circle class="struct" cx="1250" cy="390" r="30" />
+        <g stroke="var(--border)" stroke-width="3">
+          <line x1="1250" y1="350" x2="1250" y2="366" /><line x1="1250" y1="414" x2="1250" y2="430" />
+          <line x1="1210" y1="390" x2="1226" y2="390" /><line x1="1274" y1="390" x2="1290" y2="390" />
+        </g>
+      </g>
+
+      <!-- conveyor -->
+      <line class="struct" x1="700" y1="660" x2="1420" y2="660" />
+      <line class="belt-dash" x1="700" y1="660" x2="1420" y2="660" stroke="var(--accent)" stroke-width="3" opacity="0.6" />
+      <circle class="struct-thin" cx="720" cy="690" r="22" /><circle class="struct-thin" cx="1400" cy="690" r="22" />
+
+      <!-- stamped test items moving along -->
+      <g>
+        <g class="stamp">
+          <rect class="accent-stroke" x="860" y="612" width="44" height="40" rx="4" />
+          <path class="accent-stroke" d="M870,632 l8,9 l16,-19" stroke-width="4" fill="none" />
+        </g>
+        <g class="stamp d2">
+          <rect class="accent-stroke" x="1040" y="612" width="44" height="40" rx="4" />
+          <path class="accent-stroke" d="M1050,632 l8,9 l16,-19" stroke-width="4" fill="none" />
+        </g>
+        <g class="stamp d3">
+          <rect class="accent-stroke" x="1220" y="612" width="44" height="40" rx="4" />
+          <path class="accent-stroke" d="M1230,632 l8,9 l16,-19" stroke-width="4" fill="none" />
+        </g>
+      </g>
+
+      <!-- operator with lever -->
+      <g class="fig">
+        <circle class="head" cx="690" cy="470" r="30" />
+        <circle class="eye" cx="700" cy="466" r="3" /><circle class="eye" cx="680" cy="466" r="3" />
+        <line class="limb" x1="690" y1="500" x2="690" y2="640" />
+        <line class="limb" x1="690" y1="640" x2="660" y2="790" />
+        <line class="limb" x1="690" y1="640" x2="722" y2="790" />
+        <line class="limb" x1="690" y1="528" x2="646" y2="600" />
+        <g transform="translate(690,528)"><g class="lever-arm"><line class="limb" x1="0" y1="0" x2="0" y2="-96" /></g></g>
+      </g>
+      <line class="struct-thin" x1="770" y1="440" x2="770" y2="600" />
+      <circle class="amber-stroke" cx="770" cy="430" r="14" />
+
+    </svg>
+
+    <div class="floaters">
+      <span class="floater f1">TX suite</span>
+      <span class="floater f2 hot">RX suite</span>
+      <span class="floater f4">restart / GR</span>
+      <span class="floater f5">DIS pseudonode</span>
+      <span class="floater f8">martian prefix</span>
+      <span class="floater f10">Cisco NCS</span>
+      <span class="floater f12">memory parity</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">Purge semantics · interop · gap fill</div>
+      <h2>Building what didn't exist yet.</h2>
+      <div class="cards">
+        <div class="card">
+          <h3 class="card-title">ISIS POI TLV-13 LSP purge</h3>
+          <div class="card-meta"><code>TST-9088</code> · ArcOS + Cisco interop</div>
+          <p>The foundation. Built on the original manual cases and extended with convergence, RIB-vs-LSDB and negative paths — then pointed at a Cisco NCS to prove purge/POI holds across a mixed-vendor L2 mesh.</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">ISIS POI TLV-13 — TX + RX split</h3>
+          <div class="card-meta"><code>TST-9258</code> · RFC 6232 §2</div>
+          <p>TLV-13 must appear on an actual LSP purge and never on a live one. Split into TX (does the router originate it correctly) and RX (does the receiver handle it) — with auth interop, restart/GR, sequence recovery and DIS-pseudonode purges.</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">BGP soft-reconfig-inbound — gap fill</h3>
+          <div class="card-meta"><code>TST-9171</code> · L3VPN + companion EVPN suite</div>
+          <p>Read the existing suite against the bug-regression list and filled only the real gaps: the exact L3VPN crash-trigger repro, martian-prefix filtering, syslog cleanliness after toggling, memory-counter parity across enable/disable cycles.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ AGENTS: runtime ═══ -->
+  <section id="agents-run">
+    <div class="floaters rim">
+      <span class="floater f4">device truth</span>
+      <span class="floater f11">rerun</span>
+    </div>
+    <div class="wrap agents-wrap">
+      <div class="eyebrow">Writing it is the easy half</div>
+      <h2 style="margin-bottom:0.9rem;">Running it, auditing it, and finding out why it broke.</h2>
+      <p class="lede" style="margin-bottom:1.5rem;">A generated suite is a draft. These are the agents that turn a draft into something you'd trust in a regression run — and they're where I spent most of my time.</p>
+
+      <div class="agents">
+        <div class="agent hot">
+          <div class="agent-name">Build agent</div>
+          <p>The conductor. Builds a whole new suite end to end from a feature spec by orchestrating the specialists — and writes no YAML itself.</p>
+        </div>
+        <div class="agent hot">
+          <div class="agent-name">arctest debug</div>
+          <p>The loop I lived in: run → classify the failure → fix the test, action or template → rerun. Diagnoses against <em>device truth</em> over SSH, not against what the YAML claims.</p>
+        </div>
+        <div class="agent hot">
+          <div class="agent-name">arctest audit</div>
+          <p>Checks a finished suite for drift between tests, topology, testbed and actions — and keeps going until a re-audit produces zero edits.</p>
+        </div>
+        <div class="agent hot">
+          <div class="agent-name">arctest triage</div>
+          <p>Root-cause work on the hard ones: live devices, tech-support tarballs, core dumps, source. Read-only unless you explicitly authorise a change.</p>
+        </div>
+      </div>
+
+      <div class="callout" style="max-width:48rem; margin-top:1.3rem;">
+        The distinction that mattered most: <b>debug</b> asks <em>"why is this test failing?"</em> — <b>triage</b> asks <em>"why is this device behaving like that?"</em> Reaching for the wrong one is exactly how you end up fixing a test to hide a product bug.
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ BRIDGE: automation → manual ═══ -->
+  <section id="bridge2" class="bridge">
+    <div class="floaters rim">
+      <span class="floater f4">spec</span>
+      <span class="floater f11">device</span>
+    </div>
+    <div class="wrap">
+      <div class="eyebrow">What automation taught me</div>
+      <h2 class="statement">You can only automate what you already&nbsp;understand.</h2>
+      <p class="lede">A suite is a set of claims about correct behaviour. Writing one forces you to admit exactly how much of that behaviour you actually know.</p>
+
+      <div class="steps-row">
+        <div class="step-box">
+          <div class="step-k">Have</div>
+          <div class="step-v">The specification</div>
+          <p class="step-c">What the protocol is supposed to do, in prose.</p>
+        </div>
+        <div class="step-arrow" aria-hidden="true">→</div>
+        <div class="step-box gap">
+          <div class="step-k">Missing</div>
+          <div class="step-v">What it actually does <em>here</em></div>
+          <p class="step-c">On this build, this hardware, this topology. Nobody wrote this down.</p>
+        </div>
+        <div class="step-arrow" aria-hidden="true">→</div>
+        <div class="step-box">
+          <div class="step-k">Want</div>
+          <div class="step-v">A suite that asserts it</div>
+          <p class="step-c">Precise enough to fail for the right reason.</p>
+        </div>
+      </div>
+
+      <div class="callout warn" style="max-width:46rem; margin-top:1.4rem;">
+        I hit that gap directly. One finding looked like a bug, but might equally have been build-dependent behaviour — and I couldn't tell which. So I left it failing and flagged it for a human instead of "fixing" it into silence.
+      </div>
+
+      <p class="bridge-line">That isn't a testing problem. It's a <strong>knowing</strong> problem — and you don't close it by writing more YAML.</p>
+    </div>
+  </section>
+
+<!-- ═══ WEEKEND INTERLUDE ═══ -->
+  <section id="coaster" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <path id="coasterTrack" d="M-80,780 C160,780 200,700 300,560 C380,450 480,430 560,470 C610,495 630,540 640,600 L660,600 A170,170 0 1 1 1000,600 L1020,600 C1035,520 1090,470 1160,480 C1260,495 1300,600 1360,700 C1420,800 1520,790 1700,790" />
+      </defs>
+
+      <circle class="sky-dot" cx="120" cy="90" r="2.5" /><circle class="sky-dot" cx="280" cy="60" r="2" />
+      <circle class="sky-dot" cx="520" cy="110" r="2.5" /><circle class="sky-dot" cx="760" cy="70" r="2" />
+      <circle class="sky-dot" cx="980" cy="120" r="2.5" /><circle class="sky-dot" cx="1240" cy="80" r="2" />
+      <circle class="sky-dot" cx="1420" cy="140" r="2.5" /><circle class="sky-dot" cx="1520" cy="60" r="2" />
+      <circle class="sky-dot" cx="380" cy="180" r="2" /><circle class="sky-dot" cx="1120" cy="200" r="2" />
+
+      <g>
+        <circle class="wheel-rim" cx="200" cy="620" r="86" />
+        <g class="wheel-spin">
+          <line class="wheel-spoke" x1="200" y1="620" x2="200" y2="534" />
+          <line class="wheel-spoke" x1="200" y1="620" x2="261" y2="681" />
+          <line class="wheel-spoke" x1="200" y1="620" x2="286" y2="620" />
+          <line class="wheel-spoke" x1="200" y1="620" x2="261" y2="559" />
+          <line class="wheel-spoke" x1="200" y1="620" x2="200" y2="706" />
+          <line class="wheel-spoke" x1="200" y1="620" x2="139" y2="681" />
+          <line class="wheel-spoke" x1="200" y1="620" x2="114" y2="620" />
+          <line class="wheel-spoke" x1="200" y1="620" x2="139" y2="559" />
+        </g>
+        <line class="wheel-leg" x1="200" y1="620" x2="168" y2="790" />
+        <line class="wheel-leg" x1="200" y1="620" x2="232" y2="790" />
+        <line class="tower" x1="1440" y1="330" x2="1440" y2="790" />
+        <line class="tower-arm" x1="1412" y1="330" x2="1468" y2="330" />
+        <rect class="tower-car" x="1420" y="420" width="40" height="18" rx="4" />
+      </g>
+
+      <g class="pylons">
+        <line x1="330" y1="520" x2="330" y2="790" /><line x1="470" y1="437" x2="470" y2="790" />
+        <line x1="640" y1="600" x2="640" y2="790" /><line x1="830" y1="430" x2="830" y2="790" />
+        <line x1="1020" y1="600" x2="1020" y2="790" /><line x1="1180" y1="482" x2="1180" y2="790" />
+        <line x1="1340" y1="672" x2="1340" y2="790" />
+      </g>
+
+      <use href="#coasterTrack" class="track-shadow" />
+      <use href="#coasterTrack" class="track-main" />
+      <use href="#coasterTrack" class="track-ties" />
+
+      <text class="sign-text" x="800" y="250">GREAT AMERICA · SANTA CLARA</text>
+      <text class="sign-sub" x="800" y="290">THE WEEKEND</text>
+
+      <g class="rider trail2 fig fig-sm">
+        <circle class="head" cx="0" cy="0" r="11" />
+        <line class="limb" x1="0" y1="11" x2="0" y2="30" />
+        <line class="limb" x1="0" y1="14" x2="-20" y2="-10" /><line class="limb" x1="0" y1="14" x2="20" y2="-10" />
+        <line class="limb" x1="0" y1="30" x2="-11" y2="48" /><line class="limb" x1="0" y1="30" x2="11" y2="48" />
+        <animateMotion dur="7s" repeatCount="indefinite" rotate="auto" begin="-1.1s"><mpath href="#coasterTrack" /></animateMotion>
+      </g>
+      <g class="rider trail1 fig fig-sm">
+        <circle class="head" cx="0" cy="0" r="11" />
+        <line class="limb" x1="0" y1="11" x2="0" y2="30" />
+        <line class="limb" x1="0" y1="14" x2="-20" y2="-10" /><line class="limb" x1="0" y1="14" x2="20" y2="-10" />
+        <line class="limb" x1="0" y1="30" x2="-11" y2="48" /><line class="limb" x1="0" y1="30" x2="11" y2="48" />
+        <animateMotion dur="7s" repeatCount="indefinite" rotate="auto" begin="-0.55s"><mpath href="#coasterTrack" /></animateMotion>
+      </g>
+      <g class="rider fig">
+        <circle class="head" cx="0" cy="0" r="13" />
+        <circle class="eye" cx="-4" cy="-3" r="2" /><circle class="eye" cx="4" cy="-3" r="2" />
+        <line class="limb" x1="0" y1="13" x2="0" y2="34" />
+        <line class="limb" x1="0" y1="16" x2="-24" y2="-14" /><line class="limb" x1="0" y1="16" x2="24" y2="-14" />
+        <line class="limb" x1="0" y1="34" x2="-13" y2="55" /><line class="limb" x1="0" y1="34" x2="13" y2="55" />
+        <animateMotion dur="7s" repeatCount="indefinite" rotate="auto"><mpath href="#coasterTrack" /></animateMotion>
+      </g>
+    </svg>
+
+    <div class="floaters">
+      <span class="floater scream f1">AAAAAAAA</span>
+      <span class="floater scream f2">FAAAAH</span>
+      <span class="floater scream f3">GOD SAVE ME</span>
+      <span class="floater scream f4">WHY</span>
+      <span class="floater scream f5">I WANT OFF</span>
+      <span class="floater scream f6">AIYOOO</span>
+      <span class="floater scream f7">NEVER AGAIN</span>
+      <span class="floater scream f9">MY LUNCH</span>
+      <span class="floater scream f10">WHOSE IDEA</span>
+      <span class="floater scream f11">AMMAAA</span>
+      <span class="floater scream f12">ONE MORE?</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">Intermission · The weekend</div>
+      <h2>Hands up, no rollback plan.</h2>
+      <p class="lede">Intern outing to Great America, Santa Clara. Zero packets dropped. Several stomachs, less so.</p>
+    </div>
+  </section>
+  <!-- ═══ CHAPTER 03 ═══ -->
+  <section id="manual-title" class="chapter-title">
+    <div class="floaters rim">
+      <span class="floater f1">rtr1</span>
+      <span class="floater f4">rtr2</span>
+      <span class="floater f5">rtr3</span>
+      <span class="floater f8 hot">by hand first</span>
+    </div>
+    <div class="wrap">
+      <div class="ghost-num">03</div>
+      <div class="chapter-label">Chapter Three</div>
+      <h2 class="chapter-name">Manual</h2>
+      <p class="chapter-tag">Before a line of YAML — stand up the topology, run it by hand, write down what "correct" actually looks like.</p>
+    </div>
+  </section>
+
+  <section id="manual" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+
+      <!-- device rack -->
+      <rect class="struct" x="1000" y="200" width="380" height="600" rx="10" />
+      <g>
+        <line class="struct-thin" x1="1000" y1="290" x2="1380" y2="290" />
+        <line class="struct-thin" x1="1000" y1="380" x2="1380" y2="380" />
+        <line class="struct-thin" x1="1000" y1="470" x2="1380" y2="470" />
+        <line class="struct-thin" x1="1000" y1="560" x2="1380" y2="560" />
+        <line class="struct-thin" x1="1000" y1="650" x2="1380" y2="650" />
+      </g>
+      <g fill="var(--accent)">
+        <circle class="led" cx="1040" cy="245" r="7" /><circle class="led l2" cx="1064" cy="245" r="7" />
+        <circle class="led l3" cx="1088" cy="245" r="7" />
+        <circle class="led l4" cx="1040" cy="335" r="7" /><circle class="led l5" cx="1064" cy="335" r="7" />
+        <circle class="led l6" cx="1088" cy="335" r="7" />
+        <circle class="led l2" cx="1040" cy="425" r="7" /><circle class="led l4" cx="1064" cy="425" r="7" />
+        <circle class="led" cx="1088" cy="425" r="7" />
+        <circle class="led l5" cx="1040" cy="515" r="7" /><circle class="led l3" cx="1064" cy="515" r="7" />
+        <circle class="led l6" cx="1088" cy="515" r="7" />
+        <circle class="led l3" cx="1040" cy="605" r="7" /><circle class="led l6" cx="1064" cy="605" r="7" />
+        <circle class="led l2" cx="1088" cy="605" r="7" />
+        <circle class="led l4" cx="1040" cy="700" r="7" /><circle class="led" cx="1064" cy="700" r="7" />
+        <circle class="led l5" cx="1088" cy="700" r="7" />
+      </g>
+      <!-- draped cables -->
+      <path class="struct-thin" d="M1180,290 Q1250,340 1180,380" />
+      <path class="struct-thin" d="M1230,470 Q1310,520 1230,560" />
+      <path class="struct-thin" d="M1200,650 Q1290,700 1200,740" />
+
+      <!-- inspector with magnifier + clipboard -->
+      <g class="fig">
+        <circle class="head" cx="720" cy="430" r="30" />
+        <circle class="eye" cx="732" cy="426" r="3" /><circle class="eye" cx="712" cy="426" r="3" />
+        <line class="limb" x1="720" y1="460" x2="720" y2="600" />
+        <line class="limb" x1="720" y1="600" x2="690" y2="760" />
+        <line class="limb" x1="720" y1="600" x2="752" y2="760" />
+        <!-- clipboard arm -->
+        <line class="limb" x1="720" y1="490" x2="672" y2="546" />
+        <g class="scanner">
+          <line class="limb" x1="720" y1="490" x2="812" y2="528" />
+          <circle class="accent-stroke" cx="838" cy="538" r="26" />
+          <line class="accent-stroke" x1="820" y1="522" x2="806" y2="510" />
+        </g>
+      </g>
+      <!-- clipboard -->
+      <g>
+        <rect class="struct" x="596" y="530" width="86" height="112" rx="6" />
+        <line class="struct-thin" x1="616" y1="560" x2="662" y2="560" />
+        <line class="struct-thin" x1="616" y1="588" x2="662" y2="588" />
+        <line class="struct-thin" x1="616" y1="616" x2="662" y2="616" />
+        <path class="clipboard-tick accent-stroke" d="M606,556 l6,7 l11,-14" stroke-width="4" />
+        <path class="clipboard-tick t2 accent-stroke" d="M606,584 l6,7 l11,-14" stroke-width="4" />
+        <path class="clipboard-tick t3 accent-stroke" d="M606,612 l6,7 l11,-14" stroke-width="4" />
+      </g>
+
+    </svg>
+
+    <div class="floaters">
+      <span class="floater f2">IXIA</span>
+      <span class="floater f5 hot">lsp-dropped</span>
+      <span class="floater f6">lsp-processed</span>
+      <span class="floater f11">DIS handover</span>
+      <span class="floater f12">remaining-lifetime=0</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">Beyond the automation</div>
+      <h2>The findings that only showed up by hand.</h2>
+      <div class="case">
+        <h3>ISIS Restart Traffic Recovery</h3>
+        <p class="case-line">A real ISIS restart mid-traffic, forcing a live reroute onto the backup path.</p>
+        <p class="case-line verif">Higher sequence number, TLV-13 correctly absent, loss inside the convergence budget, fresh stream back to zero.</p>
+      </div>
+      <div class="case">
+        <h3>LSP Packet Counters — the real discriminator</h3>
+        <p class="case-line">Isolated a router by timer and link changes so it aged out cleanly — a pure expiry purge, no restart.</p>
+        <p class="case-line verif"><code>lsp-dropped</code> flat while <code>lsp-processed</code> increments — the exact anti-repro of a field incident <code>lsp-errors</code> alone never caught.</p>
+      </div>
+      <div class="case">
+        <h3>DIS/Pseudonode Purge on Handover</h3>
+        <p class="case-line">Forced a DIS handover on a broadcast link mid-traffic, observed from a pure receiver.</p>
+        <p class="case-line verif">The old DIS purges its pseudonode LSP correctly, and forwarding holds through the handoff.</p>
+      </div>
+    </div>
+  </section>
+
+  
+  <!-- ═══ INTERACTIVE: webox poll ═══ -->
+  <section id="poll-webox" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <ellipse cx="1180" cy="700" rx="250" ry="100" fill="var(--accent)" opacity="0.05" />
+
+      <!-- thinking dots -->
+      <g class="thinking-dots" fill="var(--accent)">
+        <circle cx="1258" cy="392" r="9" />
+        <circle cx="1290" cy="378" r="11" />
+        <circle cx="1330" cy="358" r="14" />
+      </g>
+
+      <!-- shrugging figure asking the room -->
+      <g transform="translate(1180,0)">
+        <g class="fig">
+          <circle class="head" cx="0" cy="470" r="32" />
+          <circle class="eye" cx="-11" cy="464" r="3.5" /><circle class="eye" cx="11" cy="464" r="3.5" />
+          <path class="limb" d="M-12,486 Q0,480 12,486" stroke-width="4" />
+          <line class="limb" x1="0" y1="502" x2="0" y2="644" />
+          <g transform="translate(0,532)"><g class="shrug-r"><line class="limb" x1="0" y1="0" x2="0" y2="64" /></g></g>
+          <g transform="translate(0,532)"><g class="shrug-l"><line class="limb" x1="0" y1="0" x2="0" y2="64" /></g></g>
+          <line class="limb" x1="0" y1="644" x2="-30" y2="778" />
+          <line class="limb" x1="0" y1="644" x2="30" y2="778" />
+        </g>
+      </g>
+
+    </svg>
+
+    <div class="floaters">
+      <span class="floater f1 hot">FREE FOOD</span>
+      <span class="floater f4">Webox</span>
+      <span class="floater f8">2 days left</span>
+      <span class="floater f11">help</span>
+      <span class="floater f6">tomorrow?</span>
+      <span class="floater f9">day after?</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">Audience participation</div>
+      <h2>What should I order for my last two days?</h2>
+      <p class="lede">We get free food and everyone orders on Webox. Ten weeks in, I still don't know what's actually good — and I've got exactly two orders left. Suggestions, please.</p>
+      <div class="poll" id="weboxPoll">
+        <button class="poll-opt" type="button" data-w="31">
+          <span class="poll-fill"></span><span class="poll-key">1</span>
+          <span class="poll-label">Your usual — the safe bet</span><span class="poll-pct"></span>
+        </button>
+        <button class="poll-opt" type="button" data-w="38">
+          <span class="poll-fill"></span><span class="poll-key">2</span>
+          <span class="poll-label">The one everybody sleeps on</span><span class="poll-pct"></span>
+        </button>
+        <button class="poll-opt" type="button" data-w="19">
+          <span class="poll-fill"></span><span class="poll-key">3</span>
+          <span class="poll-label">Whatever comes fastest</span><span class="poll-pct"></span>
+        </button>
+        <button class="poll-opt" type="button" data-w="12">
+          <span class="poll-fill"></span><span class="poll-key">4</span>
+          <span class="poll-label">Just get the bagels again</span><span class="poll-pct"></span>
+        </button>
+      </div>
+      <p class="poll-hint">Click one — or press 1–4. I'm genuinely writing these down.</p>
+    </div>
+  </section>
+  <!-- ═══ CHAPTER 04 ═══ -->
+  <section id="parallel-title" class="chapter-title">
+    <div class="floaters rim">
+      <span class="floater f1 hot">MIGRATE</span>
+      <span class="floater f2 hot">AUTOMATE</span>
+      <span class="floater f5 hot">MANUAL</span>
+      <span class="floater f8">same afternoon</span>
+    </div>
+    <div class="wrap">
+      <div class="ghost-num">04</div>
+      <div class="chapter-label">Chapter Four</div>
+      <h2 class="chapter-name">All At Once</h2>
+      <p class="chapter-tag">The three chapters you just read weren't sequential. They were happening on the same days, on the same racks.</p>
+    </div>
+  </section>
+
+  <section id="parallel" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g transform="translate(1110,0)">
+        <g class="juggle-body">
+          <g class="fig">
+            <circle class="head" cx="0" cy="430" r="32" />
+            <circle class="eye" cx="-10" cy="426" r="3" /><circle class="eye" cx="10" cy="426" r="3" />
+            <line class="limb" x1="0" y1="462" x2="0" y2="610" />
+            <line class="limb" x1="0" y1="610" x2="-32" y2="780" />
+            <line class="limb" x1="0" y1="610" x2="32" y2="780" />
+            <g transform="translate(0,492)"><g class="j-arm-r"><line class="limb" x1="0" y1="0" x2="76" y2="52" /></g></g>
+            <g transform="translate(0,492)"><g class="j-arm-l"><line class="limb" x1="0" y1="0" x2="-76" y2="52" /></g></g>
+          </g>
+        </g>
+        <g transform="translate(0,470)">
+          <g class="jball"><circle class="accent-fill" cx="0" cy="0" r="15" /></g>
+          <g class="jball jb2"><circle cx="0" cy="0" r="15" fill="var(--amber)" /></g>
+          <g class="jball jb3"><circle cx="0" cy="0" r="15" fill="var(--warm)" /></g>
+        </g>
+      </g>
+    </svg>
+
+    <div class="floaters">
+      <span class="floater f1 hot">MIGRATION</span>
+      <span class="floater f2 hot">AUTOMATION</span>
+      <span class="floater f3 hot">MANUAL</span>
+      <span class="floater f4">debug loop</span>
+      <span class="floater f5 warn">pe3 unreachable</span>
+      <span class="floater f6">rack booked</span>
+      <span class="floater f7">write-up</span>
+      <span class="floater f9">live rig</span>
+      <span class="floater f10">Docker lab</span>
+      <span class="floater f11 warn">isisd down</span>
+      <span class="floater f12">re-run</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">Three disciplines, concurrently</div>
+      <h2>Told as chapters. Lived as one week.</h2>
+      <p class="lede">A migration port waiting on Docker, a new suite mid-debug on live hardware, and a manual pass being written up on paper — all in the same afternoon. Context-switching between them <em>was</em> the job, and each one unblocked the others: manual findings sharpened the automation, and the migration exposed validators the new suites then inherited.</p>
+      <div class="status-row">
+        <div class="status-name mono">l3vpn-over-srv6-ping</div>
+        <div class="status-desc"><code>TST-9149</code> — debugged live, open items resolved. One genuine blocker: <code>isisd</code> down across the PEs. A lab issue, not a repo bug.</div>
+      </div>
+      <div class="status-row">
+        <div class="status-name mono">l3vpn-over-srv6-tos</div>
+        <div class="status-desc"><code>TST-9148</code> — running on the live rig, the remainder held pending PE reachability.</div>
+      </div>
+      <p class="note">The bottleneck was rarely the code. A suite could sit fully written for days waiting on a device to come back.</p>
+    </div>
+  </section>
+
+  
+<!-- ═══ THE WALKING CHALLENGE ═══ -->
+  <section id="steps" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <!-- day / night wash -->
+      <rect class="sky-wash" x="0" y="0" width="1600" height="900" fill="var(--accent)" />
+
+      <!-- sun and moon on one rotating wheel: as one sets, the other rises -->
+      <g class="day-cycle" style="transform-origin: 800px 820px;">
+        <g>
+          <circle cx="800" cy="300" r="42" fill="none" stroke="var(--amber)" stroke-width="5" />
+          <g stroke="var(--amber)" stroke-width="4" stroke-linecap="round" opacity="0.75">
+            <line x1="800" y1="230" x2="800" y2="248" /><line x1="800" y1="352" x2="800" y2="370" />
+            <line x1="730" y1="300" x2="748" y2="300" /><line x1="852" y1="300" x2="870" y2="300" />
+            <line x1="751" y1="251" x2="763" y2="263" /><line x1="837" y1="337" x2="849" y2="349" />
+            <line x1="849" y1="251" x2="837" y2="263" /><line x1="763" y1="337" x2="751" y2="349" />
+          </g>
+        </g>
+        <g>
+          <path d="M800,1298 a40,40 0 1 0 30,74 a48,48 0 1 1 -30,-74 Z"
+                fill="none" stroke="var(--muted)" stroke-width="5" />
+        </g>
+      </g>
+
+      <!-- office clock, hands racing -->
+      <g>
+        <circle class="struct" cx="440" cy="238" r="96" />
+        <circle class="accent-fill" cx="440" cy="238" r="6" />
+        <g stroke="var(--border)" stroke-width="4" stroke-linecap="round">
+          <line x1="440" y1="156" x2="440" y2="172" /><line x1="440" y1="304" x2="440" y2="320" />
+          <line x1="358" y1="238" x2="374" y2="238" /><line x1="506" y1="238" x2="522" y2="238" />
+        </g>
+        <line class="hand-hour" x1="440" y1="238" x2="440" y2="184" stroke="var(--text)" stroke-width="7" stroke-linecap="round" />
+        <line class="hand-min" x1="440" y1="238" x2="440" y2="164" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" />
+        <text class="label-svg" x="440" y="382" style="font-size:15px; letter-spacing:2px;">FOUR HOURS. EVERY DAY.</text>
+      </g>
+
+      <!-- scrolling road -->
+      <line class="road-dash" x1="0" y1="812" x2="1600" y2="812" stroke="var(--accent)" stroke-width="4" opacity="0.5" />
+
+      <!-- office landmarks streaming past -->
+      <g class="tree-pass">
+        <line class="struct-thin" x1="0" y1="790" x2="0" y2="680" />
+        <rect class="struct-thin" x="-34" y="612" width="68" height="70" rx="6" />
+      </g>
+      <g class="tree-pass tp2">
+        <line class="struct-thin" x1="0" y1="790" x2="0" y2="700" />
+        <circle class="struct-thin" cx="0" cy="668" r="34" />
+      </g>
+      <g class="tree-pass tp3">
+        <line class="struct-thin" x1="0" y1="790" x2="0" y2="666" />
+        <rect class="struct-thin" x="-26" y="596" width="52" height="72" rx="4" />
+        <line class="struct-thin" x1="-26" y1="628" x2="26" y2="628" />
+      </g>
+
+      <!-- the walker -->
+      <g transform="translate(1120,0)">
+        <g class="walk-bob">
+          <g class="fig">
+            <circle class="head" cx="0" cy="470" r="32" />
+            <circle class="eye" cx="9" cy="464" r="3.5" /><circle class="eye" cx="-9" cy="464" r="3.5" />
+            <path class="limb" d="M-12,486 Q0,496 12,486" stroke-width="4" />
+            <line class="limb" x1="0" y1="502" x2="0" y2="630" />
+            <g transform="translate(0,532)"><g class="swing-r"><line class="limb" x1="0" y1="0" x2="30" y2="72" /></g></g>
+            <g transform="translate(0,532)"><g class="swing-l"><line class="limb" x1="0" y1="0" x2="-30" y2="72" /></g></g>
+            <g transform="translate(0,630)"><g class="walk-r"><line class="limb" x1="0" y1="0" x2="26" y2="160" /></g></g>
+            <g transform="translate(0,630)"><g class="walk-l"><line class="limb" x1="0" y1="0" x2="-26" y2="160" /></g></g>
+          </g>
+        </g>
+      </g>
+    </svg>
+
+    <div class="floaters">
+      <span class="floater f1 hot">19,481 / DAY</span>
+      <span class="floater f2">≈ 4,870 / HOUR</span>
+      <span class="floater f4">136,367 / WEEK</span>
+      <span class="floater f5">≈ 592,800 / MONTH</span>
+      <span class="floater f8 hot">7,110,565 / YEAR</span>
+      <span class="floater f9">≈ 81 / MINUTE</span>
+      <span class="floater f11">office loop</span>
+      <span class="floater f12">still walking</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">The office step challenge</div>
+      <div class="step-readout">
+        <span class="count" id="stepCount" data-target="19481">0</span>
+        <span class="unit">steps / day</span>
+      </div>
+      <h2 style="margin-bottom:1rem;">Roughly four hours of walking. Daily.</h2>
+      <p class="lede">Somebody started a step challenge. I took it personally. Sun came up, sun went down, and the loop around the office kept going — which is also a reasonable summary of the debug cycles.</p>
+    </div>
+  </section>
+  <!-- ═══ CHAPTER 05 ═══ -->
+  <section id="l3vpn-title" class="chapter-title">
+    <div class="floaters rim">
+      <span class="floater f1">VRF1</span>
+      <span class="floater f2">VRF2</span>
+      <span class="floater f4">VRF3</span>
+      <span class="floater f5">VRF4</span>
+      <span class="floater f8">VRF5</span>
+      <span class="floater f11 hot">route leaking</span>
+    </div>
+    <div class="wrap">
+      <div class="ghost-num">05</div>
+      <div class="chapter-label">Chapter Five</div>
+      <h2 class="chapter-name">The Final Stretch</h2>
+      <p class="chapter-tag">Same discipline, new territory: BGP L3VPN cross-VRF route leaking on ArcOS, IPv4 and IPv6, plus policy-driven leaking.</p>
+    </div>
+  </section>
+
+  <section id="l3vpn-intro" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+
+      <!-- switchboard panel -->
+      <rect class="struct" x="920" y="180" width="480" height="560" rx="14" />
+      <!-- VRF ports left column -->
+      <g>
+        <circle class="struct-thin" cx="960" cy="260" r="14" /><text class="label-svg" x="1010" y="268" style="font-size:17px; letter-spacing:1px; text-anchor:start;">VRF1</text>
+        <circle class="struct-thin" cx="960" cy="360" r="14" /><text class="label-svg" x="1010" y="368" style="font-size:17px; letter-spacing:1px; text-anchor:start;">VRF2</text>
+        <circle class="struct-thin" cx="960" cy="460" r="14" /><text class="label-svg" x="1010" y="468" style="font-size:17px; letter-spacing:1px; text-anchor:start;">VRF3</text>
+        <circle class="struct-thin" cx="960" cy="560" r="14" /><text class="label-svg" x="1010" y="568" style="font-size:17px; letter-spacing:1px; text-anchor:start;">VRF4</text>
+        <circle class="struct-thin" cx="960" cy="660" r="14" /><text class="label-svg" x="1010" y="668" style="font-size:17px; letter-spacing:1px; text-anchor:start;">VRF5</text>
+      </g>
+      <!-- right column ports -->
+      <g>
+        <circle class="struct-thin" cx="1360" cy="260" r="14" /><circle class="struct-thin" cx="1360" cy="360" r="14" />
+        <circle class="struct-thin" cx="1360" cy="460" r="14" /><circle class="struct-thin" cx="1360" cy="560" r="14" />
+        <circle class="struct-thin" cx="1360" cy="660" r="14" />
+      </g>
+      <!-- leaking paths with flowing packets -->
+      <g stroke-linecap="round" fill="none">
+        <path class="flow" d="M974,260 C1120,260 1180,360 1346,360" stroke="var(--accent)" stroke-width="4" />
+        <path class="flow fd2" d="M974,360 C1120,360 1180,260 1346,260" stroke="var(--accent)" stroke-width="4" />
+        <path class="flow fd3" d="M974,460 C1130,460 1190,560 1346,560" stroke="var(--accent)" stroke-width="4" />
+        <path class="flow fd4" d="M974,560 C1130,560 1190,660 1346,660" stroke="var(--amber)" stroke-width="4" />
+        <path class="flow fd5" d="M974,660 C1130,660 1190,460 1346,460" stroke="var(--accent)" stroke-width="4" />
+      </g>
+
+      <!-- engineer plugging in -->
+      <g class="fig">
+        <circle class="head" cx="740" cy="430" r="30" />
+        <circle class="eye" cx="752" cy="426" r="3" /><circle class="eye" cx="732" cy="426" r="3" />
+        <line class="limb" x1="740" y1="460" x2="740" y2="610" />
+        <line class="limb" x1="740" y1="610" x2="708" y2="790" />
+        <line class="limb" x1="740" y1="610" x2="772" y2="790" />
+        <line class="limb" x1="740" y1="492" x2="694" y2="566" />
+        <g transform="translate(740,492)"><g class="plug-arm"><line class="limb" x1="0" y1="0" x2="122" y2="0" /></g></g>
+      </g>
+
+      <text class="label-svg" x="1160" y="130" style="font-size:17px; letter-spacing:2px;">END_DT4 · END_DT6</text>
+    </svg>
+
+    <div class="floaters">
+      <span class="floater f1 hot">BEST_PATH</span>
+      <span class="floater f2 hot">IMPORTED_PATH</span>
+      <span class="floater f3">export RT</span>
+      <span class="floater f5">import RT</span>
+      <span class="floater f6">Loc-RIB</span>
+      <span class="floater f8">VRF RIB</span>
+      <span class="floater f10">SRv6</span>
+      <span class="floater f12">recursive next-hop</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">L3VPN VRF route leaking</div>
+      <h2>Five VRFs. Two address families. One policy engine.</h2>
+      <p class="lede">A 5-VRF physical lab topology with eBGP CE routes for IPv4 and IPv6 — then leaked routes verified across BGP Loc-RIB, VRF RIB, and SRv6 forwarding attributes: <code>END_DT4</code> for IPv4, <code>END_DT6</code> for IPv6.</p>
+    </div>
+  </section>
+
+  <section id="l3vpn-work">
+    <div class="floaters rim">
+      <span class="floater f1">add / remove RT</span>
+      <span class="floater f4">change RT value</span>
+      <span class="floater f5 hot">no manual clears</span>
+      <span class="floater f9">VRF recreate</span>
+      <span class="floater f11">interface flap</span>
+      <span class="floater f12">AF disable</span>
+    </div>
+    <div class="wrap">
+      <div class="eyebrow">Work completed</div>
+      <h2>Functional, dynamic, and resilient — all three.</h2>
+      <div class="cards">
+        <div class="card">
+          <h3 class="card-title">Route characteristics</h3>
+          <p><code>BEST_PATH</code>, <code>IMPORTED_PATH</code>, source VRF and recursive next-hop, plus correct SRv6 SID behavior for both address families.</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Dynamic configuration</h3>
+          <p>Add and remove import/export Route Targets, change RT values, source withdrawal and recovery — across multiple routes and multiple VRFs at once.</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Lifecycle &amp; resilience</h3>
+          <p>BGP process restart, AF disable and re-enable, VRF delete and recreate, interface flap, policy object delete and recreate. Routes recover automatically — no manual BGP clears required.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="l3vpn-rpol">
+    <div class="floaters rim">
+      <span class="floater f2 hot">set-ext-community ADD</span>
+      <span class="floater f5">ext-community set</span>
+      <span class="floater f8">attach / detach</span>
+      <span class="floater f11">IPv6 RPOL</span>
+    </div>
+    <div class="wrap">
+      <div class="eyebrow">RPOL-based route leaking</div>
+      <h2>From static RTs to policy-driven leaking.</h2>
+      <div class="check-grid">
+        <div class="check-item"><span class="tick">✓</span>Export policy adding RTs via <code>set-ext-community ADD</code></div>
+        <div class="check-item"><span class="tick">✓</span>Import policy matching via extended-community sets</div>
+        <div class="check-item"><span class="tick">✓</span>Strict accept and reject policies</div>
+        <div class="check-item"><span class="tick">✓</span>Live policy edits with immediate route reevaluation</div>
+        <div class="check-item"><span class="tick">✓</span>Multiple RTs on the same exported route</div>
+        <div class="check-item"><span class="tick">✓</span>Static RTs interacting with RPOL RTs</div>
+        <div class="check-item"><span class="tick">✓</span>Policy attach and detach ordering</div>
+        <div class="check-item"><span class="tick">✓</span>Export/import policy delete and recreate</div>
+        <div class="check-item"><span class="tick">✓</span>RPOL persistence across BGP restart</div>
+        <div class="check-item"><span class="tick">✓</span>IPv6 RPOL behavior</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="l3vpn-ixia">
+    <div class="floaters rim">
+      <span class="floater f1">same-VRF</span>
+      <span class="floater f4 hot">cross-VRF</span>
+      <span class="floater f6">IPv4 stream</span>
+      <span class="floater f9">IPv6 stream</span>
+      <span class="floater f12">Leaf1 ↔ Leaf2</span>
+    </div>
+    <div class="wrap">
+      <div class="eyebrow">IXIA data-plane validation</div>
+      <h2>Control-plane truth, checked against forwarding.</h2>
+      <p class="lede">Leaf-to-leaf streams across the VRFs — IPv4 and IPv6, same-VRF and cross-VRF — so a control-plane change can be correlated with what actually forwards.</p>
+      <div class="chain">
+        <div class="node">Policy / RT change</div><span class="arrow">→</span>
+        <div class="node">BGP route change</div><span class="arrow">→</span>
+        <div class="node">VRF RIB change</div><span class="arrow">→</span>
+        <div class="node">IXIA loss / recovery</div>
+      </div>
+      <div class="callout warn" style="max-width:44rem;">
+        <b style="color:var(--warm);">ANPN-32599 — filed from this work.</b> Connected routes weren't importing consistently between VRF10 and VRF20 on LEAF1: a real discrepancy in BGP route import / RIB entry, raised as a P1 product bug rather than absorbed as a test quirk.
+      </div>
+      <blockquote class="pullquote">Validated ArcOS L3VPN cross-VRF route leaking across IPv4, IPv6 and RPOL workflows — dynamic RT changes, policy behavior, SRv6 forwarding, lifecycle and resilience testing, and IXIA-based data-plane verification.</blockquote>
+    </div>
+  </section>
+
+  <!-- ═══ THE BOARD ═══ -->
+  <section id="anpn">
+    <div class="floaters rim">
+      <span class="floater f2">traceability</span>
+      <span class="floater f11">every ticket</span>
+    </div>
+    <div class="wrap tabs-wrap">
+      <div class="eyebrow">The board</div>
+      <h2 style="margin-bottom:1.6rem;">Everything traces back to a ticket.</h2>
+
+      <div class="board-panel">
+        <div class="board">
+          <div class="board-col filed">
+            <h3>Bugs filed</h3>
+            <div class="tickets">
+              <div class="ticket filed-ticket">
+                <div class="filed-head">
+                  <span class="tid">ANPN-32599</span>
+                  <span class="filed-pill p1">P1</span>
+                </div>
+                <span class="filed-title">Connected routes import inconsistently between VRF10 and VRF20 on LEAF1</span>
+                <span class="tdesc">Discrepancy in BGP route import / RIB entry — a product bug, not a test fix.</span>
+              </div>
+              <div class="ticket filed-ticket">
+                <div class="filed-head">
+                  <span class="tid">ANPN-32811</span>
+                </div>
+                <span class="filed-title">Static route leaked through BGP reaches the destination VRF Loc-RIB but never the RIB</span>
+                <span class="tdesc">Control plane agrees, forwarding doesn't — exactly the gap the IXIA streams exist to catch.</span>
+              </div>
+              <div class="ticket filed-ticket">
+                <div class="filed-head">
+                  <span class="tid">ANPN-32766</span>
+                </div>
+                <span class="filed-title">VRF delete hangs forever when the same VRF config is removed and re-added at scale</span>
+                <span class="tdesc">At 8.5L scaled routes, re-adding an identical VRF config throws an error and the deletion never completes.</span>
+              </div>
+              <div class="ticket filed-ticket">
+                <div class="filed-head">
+                  <span class="tid">ANPN-32685</span>
+                </div>
+                <span class="filed-title">VRFMGR emits <code>ERR</code>-tagged logs on every protocol-statement commit</span>
+                <span class="tdesc">Clean commits shouldn't log errors — noise that hides real failures during triage.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="board-col hot">
+            <h3>ISIS POI — TLV-13 purge</h3>
+            <div class="tickets">
+              <div class="ticket"><span class="tid">ANPN-22652</span><span class="tdesc">Receive &amp; process purge origin TLV-13</span></div>
+              <div class="ticket"><span class="tid">ANPN-24135</span><span class="tdesc">Transmit &amp; process purge origin TLV-13</span></div>
+              <div class="ticket"><span class="tid">ANPN-24321</span><span class="tdesc">Purge with auth when Cisco inserts POI</span></div>
+              <div class="ticket"><span class="tid">ANPN-30166</span><span class="tdesc">Non-compliant purge, stale convergence after link bounce</span></div>
+              <div class="ticket"><span class="tid">ANPN-31698</span><span class="tdesc">Port of the 30166 fix to v8.2.1C</span></div>
+              <div class="ticket"><span class="tid">ANPN-25551</span><span class="tdesc">TLV encode buffer handling fix</span></div>
+              <div class="ticket"><span class="tid">TST-9258</span><span class="tdesc">Automating LSP purge TX / RX</span></div>
+              <div class="ticket ref"><span class="tid">RFC 6232</span><span class="tdesc">Purge Originator Identification TLV</span></div>
+              <div class="ticket ref"><span class="tid">RFC 4444</span><span class="tdesc">IS-IS MIB</span></div>
+            </div>
+          </div>
+
+          <div class="board-col warm">
+            <h3>L3VPN · SRv6 · route leaking</h3>
+            <div class="tickets">
+              <div class="ticket"><span class="tid">ANPN-30893</span><span class="tdesc">L3VPN BGP route leaking — validation &amp; implementation</span></div>
+              <div class="ticket"><span class="tid">ANPN-25074</span><span class="tdesc">max-metric on-startup, srv6-locator interlevel</span></div>
+              <div class="ticket"><span class="tid">ANPN-22084</span><span class="tdesc">Interlevel locator companion item</span></div>
+              <div class="ticket ref"><span class="tid">RFC 8986</span><span class="tdesc">SRv6 network programming — End.DT4 / End.DT6</span></div>
+              <div class="ticket ref"><span class="tid">RFC 8754</span><span class="tdesc">IPv6 Segment Routing Header</span></div>
+              <div class="ticket ref"><span class="tid">RFC 4364</span><span class="tdesc">BGP/MPLS IP VPNs — §11 route leaking</span></div>
+            </div>
+          </div>
+
+          <div class="board-col">
+            <h3>BGP soft-reconfig · Telemetry</h3>
+            <div class="tickets">
+              <div class="ticket"><span class="tid">TST-9171</span><span class="tdesc">SoftReconfigInbound — feature enhancement</span></div>
+              <div class="ticket"><span class="tid">ANPN-20855</span><span class="tdesc">Internal fabric queue visibility</span></div>
+              <div class="ticket ref"><span class="tid">RFC 2918</span><span class="tdesc">Route Refresh Capability for BGP-4</span></div>
+              <div class="ticket ref"><span class="tid">RFC 4271</span><span class="tdesc">Border Gateway Protocol 4</span></div>
+              <div class="ticket ref"><span class="tid">gNMI</span><span class="tdesc">OpenConfig gRPC network management interface</span></div>
+              <div class="ticket ref"><span class="tid">RFC 3411–3418</span><span class="tdesc">SNMPv3 framework</span></div>
+            </div>
+          </div>
+
+          <div class="board-col">
+            <h3>Spanning Tree · Adjacent work</h3>
+            <div class="tickets">
+              <div class="ticket ref"><span class="tid">IEEE 802.1D</span><span class="tdesc">Spanning Tree Protocol</span></div>
+              <div class="ticket ref"><span class="tid">IEEE 802.1w</span><span class="tdesc">Rapid Spanning Tree</span></div>
+              <div class="ticket ref"><span class="tid">IEEE 802.1s</span><span class="tdesc">Multiple Spanning Tree</span></div>
+              <div class="ticket"><span class="tid">ANPN-24501</span><span class="tdesc">BGP MUP feature control</span></div>
+              <div class="ticket"><span class="tid">ANPN-24916</span><span class="tdesc">LDP convergence optimization</span></div>
+              <div class="ticket"><span class="tid">ANPN-27303</span><span class="tdesc">SRv6 TE loose-path steering</span></div>
+              <div class="ticket"><span class="tid">ANPN-21258</span><span class="tdesc">STAMP implementation</span></div>
+              <div class="ticket ref"><span class="tid">SFDC-24002465</span><span class="tdesc">Field incident that started the counter conversation</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FINALE ═══ -->
+  <section id="closing" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <!-- heat glow behind the fire -->
+      <defs>
+        <radialGradient id="heatGrad">
+          <stop offset="0%" stop-color="#F2F4F5" stop-opacity="0.30" />
+          <stop offset="55%" stop-color="#F2F4F5" stop-opacity="0.09" />
+          <stop offset="100%" stop-color="#F2F4F5" stop-opacity="0" />
+        </radialGradient>
+      </defs>
+      <ellipse class="heat-glow" cx="1190" cy="655" rx="230" ry="190" fill="url(#heatGrad)" />
+
+      <!-- rising sparks framing the fire -->
+      <g stroke="#F2F4F5" stroke-width="3" stroke-linecap="round" opacity="0.4">
+        <line class="ray" x1="1190" y1="430" x2="1190" y2="330" />
+        <line class="ray r2" x1="1080" y1="470" x2="1010" y2="392" />
+        <line class="ray r3" x1="1300" y1="470" x2="1370" y2="392" />
+        <line class="ray r4" x1="1030" y1="560" x2="940" y2="546" />
+        <line class="ray r5" x1="1350" y1="560" x2="1440" y2="546" />
+      </g>
+
+      <!-- hill -->
+      <path class="struct" d="M0,830 C300,830 420,700 700,690 C980,680 1180,760 1600,760" />
+
+      <!-- the token bonfire -->
+      <g transform="translate(1190,0)">
+        <!-- logs -->
+        <line class="limb" x1="-70" y1="742" x2="70" y2="716" stroke="var(--muted)" stroke-width="9" />
+        <line class="limb" x1="-70" y1="716" x2="70" y2="742" stroke="var(--muted)" stroke-width="9" />
+
+        <!-- flames, back to front -->
+        <path class="flame fl-c" d="M-52,720 C-64,668 -30,650 -36,610 C-14,634 4,668 -4,720 Z" fill="#F2F4F5" opacity="0.18" />
+        <path class="flame fl-e" d="M6,720 C-2,664 34,646 28,604 C50,632 68,670 58,720 Z" fill="#F2F4F5" opacity="0.18" />
+        <path class="flame fl-b" d="M-34,724 C-46,656 -6,634 -14,580 C14,614 36,660 22,724 Z" fill="#F2F4F5" opacity="0.34" />
+        <path class="flame" d="M-16,726 C-30,646 14,614 4,548 C38,592 66,652 46,726 Z" fill="#F2F4F5" opacity="0.62" />
+        <path class="flame fl-d" d="M-4,728 C-14,676 16,656 10,616 C30,646 44,684 32,728 Z" fill="#FFFFFF" opacity="0.95" />
+
+        <!-- embers drifting up -->
+        <g fill="#F2F4F5">
+          <circle class="ember" cx="-30" cy="640" r="4" />
+          <circle class="ember e2" cx="18" cy="656" r="3" />
+          <circle class="ember e3" cx="-6" cy="620" r="3.5" />
+          <circle class="ember e4" cx="42" cy="648" r="2.5" />
+          <circle class="ember e5" cx="-46" cy="664" r="3" />
+        </g>
+      </g>
+
+      <!-- waving figure on the hill -->
+      <g class="fig" transform="translate(700,0)">
+        <circle class="head" cx="0" cy="500" r="30" />
+        <circle class="eye" cx="-10" cy="496" r="3" /><circle class="eye" cx="10" cy="496" r="3" />
+        <line class="limb" x1="0" y1="530" x2="0" y2="620" />
+        <line class="limb" x1="0" y1="620" x2="-26" y2="688" />
+        <line class="limb" x1="0" y1="620" x2="26" y2="688" />
+        <line class="limb" x1="0" y1="556" x2="-34" y2="608" />
+        <g transform="translate(0,556)"><g class="wave-arm"><line class="limb" x1="0" y1="0" x2="42" y2="34" /></g></g>
+      </g>
+    </svg>
+
+    <div class="floaters">
+      <span class="floater f1">ISIS</span>
+      <span class="floater f2">BGP</span>
+      <span class="floater f3">gNMI</span>
+      <span class="floater f4">SNMP</span>
+      <span class="floater f7">STP</span>
+      <span class="floater f8">SRv6</span>
+      <span class="floater f11 hot">L3VPN</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow">Ten weeks in</div>
+      <h2>One system, tested end to end.</h2>
+      <div class="token-burn">
+        <span class="tnum white" id="tokenCount" data-target="14200000" data-dur="6500" data-suffix="+">0</span>
+        <span class="tunit">tokens, thoroughly incinerated</span>
+      </div>
+      <p class="lede">From purge semantics to policy semantics — same discipline, bigger scope. Somewhere in there I burned through millions of tokens arguing with an AI about YAML indentation. And yes, the roller coaster counted as testing morale.</p>
+      <div class="continue-line"></div>
+    </div>
+  </section>
+
+  
+  <!-- ═══ THE NERVOUS BOW ═══ -->
+  <section id="nervous" class="scene">
+    <svg class="bleed" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <ellipse cx="800" cy="710" rx="270" ry="100" fill="var(--amber)" opacity="0.06" />
+
+      <!-- audience silhouettes, watching -->
+      <g opacity="0.16">
+        <g class="fig fig-sm" transform="translate(180,0)">
+          <circle class="head" cx="0" cy="676" r="18" /><line class="limb" x1="0" y1="694" x2="0" y2="754" />
+          <line class="limb" x1="0" y1="706" x2="-26" y2="736" /><line class="limb" x1="0" y1="706" x2="26" y2="736" />
+          <line class="limb" x1="0" y1="754" x2="-18" y2="800" /><line class="limb" x1="0" y1="754" x2="18" y2="800" />
+        </g>
+        <g class="fig fig-sm" transform="translate(330,0)">
+          <circle class="head" cx="0" cy="682" r="18" /><line class="limb" x1="0" y1="700" x2="0" y2="758" />
+          <line class="limb" x1="0" y1="712" x2="-26" y2="742" /><line class="limb" x1="0" y1="712" x2="26" y2="742" />
+          <line class="limb" x1="0" y1="758" x2="-18" y2="800" /><line class="limb" x1="0" y1="758" x2="18" y2="800" />
+        </g>
+        <g class="fig fig-sm" transform="translate(1280,0)">
+          <circle class="head" cx="0" cy="676" r="18" /><line class="limb" x1="0" y1="694" x2="0" y2="754" />
+          <line class="limb" x1="0" y1="706" x2="-26" y2="736" /><line class="limb" x1="0" y1="706" x2="26" y2="736" />
+          <line class="limb" x1="0" y1="754" x2="-18" y2="800" /><line class="limb" x1="0" y1="754" x2="18" y2="800" />
+        </g>
+        <g class="fig fig-sm" transform="translate(1430,0)">
+          <circle class="head" cx="0" cy="684" r="18" /><line class="limb" x1="0" y1="702" x2="0" y2="760" />
+          <line class="limb" x1="0" y1="714" x2="-26" y2="744" /><line class="limb" x1="0" y1="714" x2="26" y2="744" />
+          <line class="limb" x1="0" y1="760" x2="-18" y2="800" /><line class="limb" x1="0" y1="760" x2="18" y2="800" />
+        </g>
+      </g>
+
+      <!-- the nervous presenter -->
+      <g transform="translate(800,0)">
+        <g class="body-shake">
+          <g class="fig">
+            <!-- head with a wide, slightly-too-pleased grin -->
+            <circle class="head" cx="0" cy="450" r="36" />
+            <g class="brow">
+              <line class="limb" x1="-24" y1="428" x2="-8" y2="424" stroke-width="4" />
+              <line class="limb" x1="24" y1="428" x2="8" y2="424" stroke-width="4" />
+            </g>
+            <circle class="eye" cx="-13" cy="444" r="4" />
+            <circle class="eye" cx="13" cy="444" r="4" />
+            <!-- the grin -->
+            <path d="M-24,462 Q0,492 24,462 Q0,474 -24,462 Z" fill="var(--text)" />
+            <!-- sweat -->
+            <g fill="var(--accent)">
+              <ellipse class="sweat-drop" cx="40" cy="432" rx="5" ry="8" />
+              <ellipse class="sweat-drop sd2" cx="-40" cy="440" rx="5" ry="8" />
+            </g>
+
+            <line class="limb" x1="0" y1="486" x2="0" y2="626" />
+            <!-- arms clasped nervously in front -->
+            <path class="limb" d="M0,516 Q-30,566 0,580" />
+            <path class="limb" d="M0,516 Q30,566 0,580" />
+            <!-- shivering legs -->
+            <g transform="translate(0,626)"><g class="shiver"><line class="limb" x1="0" y1="0" x2="-30" y2="174" /></g></g>
+            <g transform="translate(0,626)"><g class="shiver sv2"><line class="limb" x1="0" y1="0" x2="30" y2="174" /></g></g>
+          </g>
+        </g>
+      </g>
+
+    </svg>
+
+    <div class="floaters">
+      <span class="floater f1 warn">any questions?</span>
+      <span class="floater f4 warn">please no</span>
+      <span class="floater f8">thank you</span>
+      <span class="floater f11 warn">🙂</span>
+    </div>
+
+    <div class="scene-copy">
+      <div class="eyebrow warn">Q&amp;A</div>
+      <h2>Thank you. Please don't ask me questions.</h2>
+      <p class="lede">I'm a bit nervous. Also the legs have been doing that for the last three slides and I'd rather nobody mentioned it.</p>
+    </div>
+  </section>
+
+  <footer>Compiled from PR descriptions, file diffs, and local test-plan docs in the Arrcus/arctest and l3vpn working trees.</footer>
+
+  <script>
+    var slides = Array.prototype.slice.call(document.querySelectorAll('section'));
+    var dotnav = document.getElementById('dotnav');
+    var slideCounter = document.getElementById('slideCounter');
+    slides.forEach(function(s, i) {
+      var b = document.createElement('button');
+      b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+      b.addEventListener('click', function() { s.scrollIntoView({ behavior: 'smooth' }); });
+      dotnav.appendChild(b);
+    });
+    var dots = Array.prototype.slice.call(dotnav.children);
+    var currentIndex = 0;
+
+    function closestSlideIndex() {
+      var best = 0, bestDist = Infinity;
+      slides.forEach(function(s, i) {
+        var d = Math.abs(s.getBoundingClientRect().top);
+        if (d < bestDist) { bestDist = d; best = i; }
+      });
+      return best;
+    }
+    function updateChrome() {
+      currentIndex = closestSlideIndex();
+      dots.forEach(function(d, i) { d.classList.toggle('active', i === currentIndex); });
+      slideCounter.innerHTML = '<b>' + (currentIndex + 1) + '</b> / ' + slides.length;
+    }
+    document.addEventListener('scroll', updateChrome, { passive: true });
+    updateChrome();
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        slides[Math.min(currentIndex + 1, slides.length - 1)].scrollIntoView({ behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        slides[Math.max(currentIndex - 1, 0)].scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+
+    var fsToggle = document.getElementById('fsToggle');
+    fsToggle.addEventListener('click', function() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(function() {});
+      } else {
+        document.exitFullscreen();
+      }
+    });
+    document.addEventListener('fullscreenchange', function() {
+      fsToggle.textContent = document.fullscreenElement ? 'Exit ⤢' : 'Present ⤢';
+    });
+
+    var progress = document.getElementById('progress');
+    function updateProgress() {
+      var h = document.documentElement;
+      progress.style.width = (h.scrollTop / (h.scrollHeight - h.clientHeight) * 100) + '%';
+    }
+    document.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    var io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('in-view'); });
+    }, { threshold: 0.15 });
+    slides.forEach(function(s) { io.observe(s); });
+
+    var navLinks = document.querySelectorAll('.nav-links a');
+    var navIo = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) {
+          navLinks.forEach(function(l) { l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id); });
+        }
+      });
+    }, { threshold: 0.5 });
+    slides.forEach(function(s) { navIo.observe(s); });
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.querySelectorAll('animateMotion').forEach(function(el) { el.remove(); });
+    }
+
+    // count-up numerals (steps, tokens)
+    var reduceMo = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function countUp(el) {
+      var target = parseInt(el.dataset.target, 10);
+      var dur = parseInt(el.dataset.dur, 10) || 1900;
+      var suffix = el.dataset.suffix || '';
+      if (reduceMo) { el.textContent = target.toLocaleString() + suffix; return; }
+      var start = null;
+      function frame(ts) {
+        if (start === null) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 1.35);
+        if (p < 1) {
+          el.textContent = Math.round(target * eased).toLocaleString();
+          requestAnimationFrame(frame);
+        } else {
+          // land exactly on the number, then stop and mark it as a floor
+          el.textContent = target.toLocaleString() + suffix;
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+    var counted = new Set();
+    var countIo = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (!e.isIntersecting || counted.has(e.target.id)) return;
+        counted.add(e.target.id);
+        countUp(e.target);
+      });
+    }, { threshold: 0.6 });
+    ['stepCount', 'tokenCount'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) countIo.observe(el);
+    });
+
+    // interactive webox poll
+    var poll = document.getElementById('weboxPoll');
+    var pollOpts = Array.prototype.slice.call(poll.querySelectorAll('.poll-opt'));
+    var tally = pollOpts.map(function(o) { return parseInt(o.dataset.w, 10); });
+
+    function renderPoll() {
+      var total = tally.reduce(function(a, b) { return a + b; }, 0);
+      pollOpts.forEach(function(opt, i) {
+        var pct = Math.round(tally[i] / total * 100);
+        opt.querySelector('.poll-fill').style.width = pct + '%';
+        opt.querySelector('.poll-pct').textContent = pct + '%';
+      });
+    }
+    function vote(i) {
+      tally[i] += 6;
+      poll.classList.add('voted');
+      pollOpts.forEach(function(o, j) { o.classList.toggle('picked', j === i); });
+      renderPoll();
+    }
+    pollOpts.forEach(function(opt, i) {
+      opt.addEventListener('click', function() { vote(i); });
+    });
+    document.addEventListener('keydown', function(e) {
+      if (slides[currentIndex] && slides[currentIndex].id === 'poll-webox') {
+        var n = parseInt(e.key, 10);
+        if (n >= 1 && n <= pollOpts.length) { e.preventDefault(); vote(n - 1); }
+      }
+    });
+  </script>
+</body>
